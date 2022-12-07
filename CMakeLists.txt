@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(eo2c LANGUAGES CXX)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../build/bin")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
-add_subdirectory(src/parser)
-add_subdirectory(src/main)
+add_subdirectory(src)
+
+enable_testing()
+
+add_subdirectory(tests)

@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+add_library(parser "")
 
-set(SOURCE_LIB
-    parser.h
+target_sources(parser
+  PRIVATE
     parser.cpp
+  PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/parser.h
 )
 
-add_library(parser STATIC ${SOURCE_LIB})
+target_include_directories(parser
+  PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}
+)

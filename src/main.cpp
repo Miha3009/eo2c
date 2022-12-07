@@ -2,14 +2,14 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include "../parser/parser.h"
+#include "parser.h"
 
-int main()
+int main(int argc, char** argv)
 {
     std::string fileName = "app.eo";
     std::ifstream fileStream(fileName);
     if(fileStream.fail()) {
-        std::cout << "Module" << fileName << " isn't accesible" << std::endl;
+        std::cout << "File" << fileName << " isn't accesible" << std::endl;
         return 1;
     }
 

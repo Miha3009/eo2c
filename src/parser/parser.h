@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <vector>
 
 void parse(const char* str, std::string path);
 
@@ -19,29 +20,31 @@ class parser
     int line;
     int column;
 
-    std::string curValue;
-    bool hasError;
-    int tabs;
+    bool hasError = false;
+    std::string lexValue;
+    std::vector<int> spaces;
 
     public:
         parser(const char* str, std::string path);
 
         bool isProgram();
+        bool isLicense();
         bool isMetas();
         bool isMeta();
         bool isObjects();
         bool isObject();
         bool isName();
         bool isComment();
-        bool isDetails();
         bool isTail();
-        bool isVtail();
+        bool isMethod();
         bool isAbstraction();
         bool isAttributes();
         bool isAttribute();
         bool isSuffix();
         bool isRef();
+        bool isHas();
         bool isApplication();
+        bool isScope();
         bool isHtail();
         bool isHead();
         bool isData();
@@ -51,20 +54,16 @@ class parser
         bool isChar();
         bool isRegex();
         bool isFloat();
-        bool isExp();
         bool isBool();
-        bool isKeyword(std::string&& word);
+        bool isEOL();
 
-        int getTabsCount();
         void ignore();
         bool errorMessage(std::string&& messageText);
+        void debugMessage(std::string&& messageText);
         void printMessage(std::string&& messageText, std::string&& messageType);
 
         inline bool isSymbol(char ch) {
             return str[pos] == ch;
-        }
-        inline bool isEOL() {
-            return str[pos] == '\n' || str[pos] == '\0';
         }
         inline bool isEOF() {
             return str[pos] == '\0';
@@ -75,17 +74,12 @@ class parser
         inline bool isDigit() {
             return str[pos] >= '0' && str[pos] <= '9';
         }
-        inline bool isAny() {
-            return !isEOL();
+        inline bool isHex() {
+            return isDigit() || (str[pos] >= 'A' && str[pos] <= 'F');
         }
-        inline void next() {
-            pos++;
-            column++;
-        }
-        inline void nextLine() {
-            pos++;
-            column = 1;
-            line++;
+        inline void next(int step) {
+            pos += step;
+            column += step;
         }
         inline void storeLocation(Location& l) {
             l.pos = pos;
