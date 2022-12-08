@@ -1,14 +1,14 @@
 #include <iostream>
 #include "parser.h"
 
-#define DEBUG
+//#define DEBUG
 
 void parse(const char* str, std::string path) {
     parser p(str, path);
     if(p.isProgram()) {
-        std::cout << "OK" << std::endl;
+        std::cout << "OK " << path << std::endl;
     } else {
-        std::cout << "FAIL" << std::endl;
+        std::cout << "FAIL " << path << std::endl;
     }
     return;
 }
@@ -212,6 +212,9 @@ _1:
 #endif
         goto _2;
     }
+    if(spaces[line] == 0 && isEOL()) {
+        goto _1;
+    }
     restoreLocation(l);
     return false;
 _2:
@@ -226,8 +229,9 @@ _3:
     goto _end;
 _4:
     if(isEOL()) {
-        goto _5;
+        goto _4;
     }
+    goto _5;
 _5:
     if(spaces[line] == spaces[l.line]+2) {
         goto _3;
@@ -243,6 +247,9 @@ _end:
 bool parser::isMethod() {
     Location l;
     storeLocation(l);
+    if(str[pos-1] == '.') {
+        goto _1;
+    }
     if(isSymbol('.')) {
         next(1);
         goto _1;
@@ -294,6 +301,7 @@ _3:
 _4:
     if(str[pos]   == ' ' &&
        str[pos+1] == '/') {
+        next(2);
         goto _5;
     }
     goto _end;
@@ -510,6 +518,9 @@ _1:
     }
     goto _end;
 _2:
+    if(isApplication()) {
+        goto _1;
+    }
     if(isScope()) {
         goto _1;
     }
@@ -520,9 +531,6 @@ _2:
         goto _1;
     }
     if(isHas()) {
-        goto _1;
-    }
-    if(isApplication()) {
         goto _1;
     }
     return errorMessage("htail expected");
@@ -621,16 +629,16 @@ _1:
 // data ::= bytes | string | integer | char | float | regex
 bool parser::isData() {
     return isBool()
-    || isInteger()
     || isFloat()
     || isBytes()
+    || isInteger()
+    || isText()
     || isString()
     || isChar()
     || isRegex();
 }
 
 // bytes ::= byte {'-' byte} | '--'
-// byte ::= /[\dA-F][\dA-F]/
 bool parser::isBytes() {
     Location l;
     storeLocation(l);
@@ -640,35 +648,26 @@ bool parser::isBytes() {
         next(2);
         goto _end;
     }
-    if(isHex()) {
-        tmpValue += str[pos];
-        next(1);
+    if(isByte()) {
+        tmpValue += lexValue;
         goto _1;
     }
     return false;
 _1:
-    if(isHex()) {
+    if(isSymbol('-')){
         tmpValue += str[pos];
         next(1);
-        goto _4;
+        goto _2;
     }
     restoreLocation(l);
     return false;
 _2:
-    if(isHex()) {
-        tmpValue += str[pos];
-        next(1);
+    if(isByte()) {
+        tmpValue += lexValue;
         goto _3;
     }
-    return errorMessage("Hex digit expected");
+    goto _end;
 _3:
-    if(isHex()) {
-        tmpValue += str[pos];
-        next(1);
-        goto _4;
-    }
-    return errorMessage("Hex digit expected");
-_4:
     if(isSymbol('-')){
         tmpValue += str[pos];
         next(1);
@@ -677,6 +676,67 @@ _4:
 _end:
 #ifdef DEBUG
     debugMessage("This is bytes");
+#endif
+    lexValue = tmpValue;
+    return true;
+}
+
+// byte ::= /[\dA-F][\dA-F]/
+bool parser::isByte() {
+    if(((str[pos] >= '0' && str[pos] <= '9') || (str[pos] >= 'A' && str[pos] <= 'F')) &&
+       ((str[pos+1] >= '0' && str[pos+1] <= '9') || (str[pos+1] >= 'A' && str[pos+1] <= 'F'))) {
+        lexValue = "" + str[pos] + str[pos+1];
+        next(2);
+        return true;
+    }
+    return false;
+}
+
+bool parser::isText() {
+    int tmpSpaces = spaces[line];
+    std::string tmpValue = "";
+    if(str[pos]   == '"' &&
+       str[pos+1] == '"' &&
+       str[pos+2] == '"') {
+        tmpValue += "\"\"\"";
+        next(3);
+        goto _1;
+    }
+    return false;
+_1:
+    if(str[pos]   == '"' &&
+       str[pos+1] == '"' &&
+       str[pos+2] == '"') {
+        tmpValue += "\"\"\"";
+        next(3);
+        goto _end;
+    }
+    if(isEscapeSequence()) {
+        tmpValue += lexValue;
+        goto _1;
+    }
+    if(str[pos] == '\r') {
+        next(1);
+        goto _1;
+    }
+    if(str[pos] == '\n') {
+        pos++;
+        line++;
+        column = 1;
+        for(int i = 0; i < tmpSpaces; ++i) {
+            if(str[pos] == ' ') next(1);
+        }
+        goto _1;
+    }
+    if(isEOF()) {
+        return errorMessage("\"\"\" expected");
+    }
+    tmpValue += str[pos];
+    next(1);
+    goto _1;
+_end:
+#ifdef DEBUG
+    debugMessage("This is text");
 #endif
     lexValue = tmpValue;
     return true;
@@ -699,12 +759,9 @@ _1:
             restoreLocation(l);
             return errorMessage("Unexpected end of line. '\"' expected");
         }
-        if(isSymbol('\\')) {
-            if(isEOL()) {
-                return errorMessage("Unexpected end of line. '/' expected");
-            }
-            tmpValue += str[pos];
-            next(1);
+        if(isEscapeSequence()) {
+            tmpValue += lexValue;
+            continue;
         }
         tmpValue += str[pos];
         next(1);
@@ -840,12 +897,9 @@ _1:
         if(isEOL()) {
             return errorMessage("Unexpected end of line. '/' expected");
         }
-        if(isSymbol('\\')) {
-            if(isEOL()) {
-                return errorMessage("Unexpected end of line. '/' expected");
-            }
-            tmpValue += str[pos];
-            next(1);
+        if(isEscapeSequence()) {
+            tmpValue += lexValue;
+            continue;
         }
         tmpValue += str[pos];
         next(1);
@@ -896,7 +950,7 @@ _1:
     if(isSymbol('e')) {
         tmpValue += str[pos];
         next(1);
-        goto _3;
+        goto _5;
     }
     restoreLocation(l);
     return false;
@@ -904,15 +958,25 @@ _2:
     if(isDigit()) {
         tmpValue += str[pos];
         next(1);
-        goto _2;
+        goto _3;
     }
-    if(isSymbol('e')) {
+    restoreLocation(l);
+    return false;
+_3:
+    if(isDigit()) {
         tmpValue += str[pos];
         next(1);
         goto _3;
     }
+    goto _4;
+_4:
+    if(isSymbol('e')) {
+        tmpValue += str[pos];
+        next(1);
+        goto _5;
+    }
     goto _end;
-_3:
+_5:
     if(isSymbol('+') || isSymbol('-')) {
         tmpValue += str[pos];
         next(1);
@@ -920,15 +984,15 @@ _3:
     if(isDigit()) {
         tmpValue += str[pos];
         next(1);
-        goto _4;
+        goto _6;
     }
     restoreLocation(l);
-    return errorMessage("Mantissa digits expected");
-_4:
+    return false;
+_6:
     if(isDigit()) {
         tmpValue += str[pos];
         next(1);
-        goto _4;
+        goto _6;
     }
     goto _end;
 _end:
@@ -976,6 +1040,52 @@ _1:
 #ifdef DEBUG
     debugMessage("This is comment");
 #endif
+    return true;
+}
+
+bool parser::isEscapeSequence() {
+    std::string tmpValue = "";
+    if(isSymbol('\\')) {
+        tmpValue += str[pos];
+        next(1);
+        goto _1;
+    }
+    return false;
+_1:
+    if(isSymbol('b') || isSymbol('t') || isSymbol('n') || isSymbol('f') ||
+       isSymbol('r') || isSymbol('\'') || isSymbol('"') || isSymbol('\\')) {
+        tmpValue += str[pos];
+        next(1);
+        goto _end;
+    }
+    if(str[pos] >= '0' && str[pos] <= '7') {
+        tmpValue += str[pos];
+        next(1);
+        goto _end;
+    }
+    if(isSymbol('u')) {
+        tmpValue += str[pos];
+        next(1);
+        goto _2;
+    }
+    return errorMessage("escape sequence expected");
+_2:
+    if(isByte()) {
+        tmpValue += lexValue;
+        goto _3;
+    }
+    return errorMessage("hex number of unicode character expected");
+_3:
+    if(isByte()) {
+        tmpValue += lexValue;
+        goto _end;
+    }
+    return errorMessage("hex number of unicode character expected");
+_end:
+#ifdef DEBUG
+    debugMessage("This is escape sequence");
+#endif
+    lexValue = tmpValue;
     return true;
 }
 

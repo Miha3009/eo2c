@@ -98,8 +98,8 @@ TEST_CASE("Regex test") {
 }
 
 TEST_CASE("Float test") {
-    std::vector<std::string> ok = {"1.0", "123.456", "1.", "-1.0", "+1.0", "1e10", "1e-10"};
-    std::vector<std::string> fail = {"", "1", ".1", "1.0e"};
+    std::vector<std::string> ok = {"1.0", "123.456", "-1.0", "+1.0", "1e10", "1e-10"};
+    std::vector<std::string> fail = {"", "1", "1.", "1.0e"};
     testParserFunction(ok, "isFloat", &parser::isFloat, true);
     testParserFunction(fail, "isFloat", &parser::isFloat, false);
 }

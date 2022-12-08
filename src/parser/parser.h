@@ -34,7 +34,6 @@ class parser
         bool isObjects();
         bool isObject();
         bool isName();
-        bool isComment();
         bool isTail();
         bool isMethod();
         bool isAbstraction();
@@ -49,12 +48,16 @@ class parser
         bool isHead();
         bool isData();
         bool isBytes();
+        bool isByte();
+        bool isText();
         bool isString();
         bool isInteger();
         bool isChar();
         bool isRegex();
         bool isFloat();
         bool isBool();
+        bool isComment();
+        bool isEscapeSequence();
         bool isEOL();
 
         void ignore();
@@ -73,9 +76,6 @@ class parser
         }
         inline bool isDigit() {
             return str[pos] >= '0' && str[pos] <= '9';
-        }
-        inline bool isHex() {
-            return isDigit() || (str[pos] >= 'A' && str[pos] <= 'F');
         }
         inline void next(int step) {
             pos += step;
