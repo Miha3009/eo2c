@@ -2,8 +2,9 @@
 #define PARSER_H
 
 #include <vector>
+#include "object.h"
 
-void parse(const char* str, std::string path);
+bool parse(const char* str, std::string path, Object* root);
 
 struct Location {
     int pos;
@@ -11,10 +12,10 @@ struct Location {
     int column;
 };
 
-class parser
-{
+class Parser {
     const char* str = nullptr;
     std::string path;
+    std::vector<int> spaces;
 
     int pos;
     int line;
@@ -22,10 +23,12 @@ class parser
 
     bool hasError = false;
     std::string lexValue;
-    std::vector<int> spaces;
+    objectType dataType;
+    Object* curObj;
+    Object* root;
 
     public:
-        parser(const char* str, std::string path);
+        Parser(const char* str, std::string path, Object* root);
 
         bool isProgram();
         bool isLicense();
@@ -42,7 +45,7 @@ class parser
         bool isSuffix();
         bool isRef();
         bool isHas();
-        bool isApplication();
+        bool isApplication(bool parseHtail);
         bool isScope();
         bool isHtail();
         bool isHead();

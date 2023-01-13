@@ -1,21 +1,23 @@
 #include <iostream>
 #include "parser.h"
 
-//#define DEBUG
-
-void parse(const char* str, std::string path) {
-    parser p(str, path);
-    if(p.isProgram()) {
+bool parse(const char* str, std::string path, Object* root) {
+    Parser p(str, path, root);
+    bool result = p.isProgram();
+#ifdef DEBUG
+    if(result) {
         std::cout << "OK " << path << std::endl;
     } else {
         std::cout << "FAIL " << path << std::endl;
     }
-    return;
+#endif
+    return result;
 }
 
-parser::parser(const char* str, std::string path): str{str}, path{path},
-    pos{0}, line{1}, column{1}
+Parser::Parser(const char* str, std::string path, Object* root): str{str}, path{path},
+    pos{0}, line{1}, column{1}, root{root}
 {
+    root->setName("root");
     int p = 0;
     spaces = {0, 0};
     while(str[p] != '\0') {
@@ -34,7 +36,7 @@ parser::parser(const char* str, std::string path): str{str}, path{path},
 }
 
 // program ::= [license] [metas] objects
-bool parser::isProgram() {
+bool Parser::isProgram() {
     isLicense();
     isMetas();
     if(isObjects()) {
@@ -49,7 +51,7 @@ _end:
 }
 
 // license ::= {comment EOL}
-bool parser::isLicense() {
+bool Parser::isLicense() {
     if(isComment()) {
         goto _1;
     }
@@ -70,7 +72,7 @@ _end:
 }
 
 // metas ::= {meta} EOL
-bool parser::isMetas() {
+bool Parser::isMetas() {
     if(isMeta()){
         goto _1;
     }
@@ -91,7 +93,7 @@ _end:
 }
 
 // meta ::= '#' name [' ' ANY {ANY}] EOL
-bool parser::isMeta() {
+bool Parser::isMeta() {
     if(isSymbol('+')){
         next(1);
         goto _1;
@@ -127,7 +129,8 @@ _end:
 }
 
 // objects ::= object {EOL [object]}
-bool parser::isObjects() {
+bool Parser::isObjects() {
+    curObj = root;
     if(isObject()) {
         goto _1;
     }
@@ -148,6 +151,7 @@ _2:
         goto _end;
     }
 _3:
+    curObj = root;
     if(isObject()){
         goto _1;
     }
@@ -160,14 +164,18 @@ _end:
 }
 
 // object ::= (abstraction | application) details
-bool parser::isObject() {
+bool Parser::isObject() {
     Location l;
+    Object* tmpObj = curObj;
+    curObj = curObj->makeChild(CLASS_TYPE);
     if(isAbstraction()) {
         goto _1;
     }
-    if(isApplication()) {
+    if(isApplication(true)) {
         goto _1;
     }
+    delete curObj;
+    curObj = tmpObj;
     return false;
 _1:
     if(isTail()) {
@@ -194,11 +202,12 @@ _end:
 #ifdef DEBUG
     debugMessage("This is object");
 #endif
+    curObj = tmpObj;
     return true;
 }
 
 // tail ::= EOL TAB {object EOL} UNTAB
-bool parser::isTail() {
+bool Parser::isTail() {
     Location l;
     storeLocation(l);
     if(isEOL()) {
@@ -244,7 +253,7 @@ _end:
     return true;
 }
 
-bool parser::isMethod() {
+bool Parser::isMethod() {
     Location l;
     storeLocation(l);
     if(str[pos-1] == '.') {
@@ -279,7 +288,7 @@ _end:
 }
 
 // abstraction ::= attributes [suffix]
-bool parser::isAbstraction() {
+bool Parser::isAbstraction() {
 _1:
     if(isComment()) {
         goto _1;
@@ -322,7 +331,7 @@ _end:
 }
 
 // attributes ::= '[' (attribute {' ' attribute}) ']'
-bool parser::isAttributes() {
+bool Parser::isAttributes() {
     if(isSymbol('[')) {
         next(1);
         goto _1;
@@ -336,6 +345,7 @@ _1:
     goto _2;
 _2:
     if(isAttribute()){
+        curObj->addAttribute(std::move(lexValue));
         goto _3;
     }
     return errorMessage("attribute or ']' expected");;
@@ -357,7 +367,7 @@ _end:
 }
 
 // attribute ::= '@' | name ['...']
-bool parser::isAttribute() {
+bool Parser::isAttribute() {
     std::string tmpValue = "";
     if(isSymbol('@')) {
         tmpValue += str[pos];
@@ -387,7 +397,7 @@ _end:
 }
 
 // suffix ::= ' ' '>' ' ' ('@' | name) [!]
-bool parser::isSuffix() {
+bool Parser::isSuffix() {
     std::string tmpValue;
     if(str[pos]   == ' ' &&
        str[pos+1] == '>' &&
@@ -398,6 +408,11 @@ bool parser::isSuffix() {
     return false;
 _1:
     if(isAttribute()) {
+        if(curObj->getParent()->getType() == HTAIL_TYPE) {
+            curObj->getParent()->setName(lexValue);
+        } else {
+            curObj->setName(lexValue);
+        }
         goto _2;
     }
     return errorMessage("'@' or name expected");
@@ -412,7 +427,7 @@ _2:
     return true;
 }
 
-bool parser::isHas() {
+bool Parser::isHas() {
     if(isSymbol(':')) {
         next(1);
         goto _1;
@@ -435,8 +450,11 @@ _end:
 }
 
 // application ::= head [htail]
-bool parser::isApplication() {
+bool Parser::isApplication(bool parseHtail) {
+    Object* tmpObj = curObj;
     if(isHead()) {
+        curObj->setValue(lexValue);
+        curObj->setType(dataType);
         goto _1;
     }
     if(isScope()) {
@@ -445,6 +463,9 @@ bool parser::isApplication() {
     return false;
 _1:
     if(isHead()) {
+        curObj = curObj->makeChild(CLASS_TYPE);
+        curObj->setValue(lexValue);
+        curObj->setType(dataType);
         goto _1;
     }
     if(isScope()) {
@@ -463,7 +484,7 @@ _2:
     }
     goto _3;
 _3:
-    if(isHtail()) {
+    if(parseHtail && isHtail()) {
         goto _end;
     }
     goto _end;
@@ -471,17 +492,21 @@ _end:
 #ifdef DEBUG
     debugMessage("This is application");
 #endif
+    curObj = tmpObj;
     return true;
 }
 
-bool parser::isScope() {
+bool Parser::isScope() {
+    Object* tmpObj = curObj;
     if(isSymbol('(')) {
         next(1);
         goto _1;
     }
     return false;
 _1:
-    if(isApplication()) {
+    curObj->setType(SCOPE_TYPE);
+    curObj = curObj->makeChild(CLASS_TYPE);
+    if(isApplication(true)) {
         goto _2;
     }
     return errorMessage("application expected");
@@ -495,54 +520,56 @@ _end:
 #ifdef DEBUG
     debugMessage("This is scope");
 #endif
+    curObj = tmpObj;
     return true;
 }
 
 // htail ::= ' ' ('(' application ')' | application (ref | ':' name | suffix | ' ' application))
-bool parser::isHtail() {
-    if(isSuffix()) {
-        goto _1;
-    }
+bool Parser::isHtail() {
+    Object* tmpObj;
     if(isSymbol(' ')) {
+        curObj = curObj->makeChild(HTAIL_TYPE);
+        tmpObj = curObj;
         next(1);
-        goto _2;
+        goto _1;
     }
     return false;
 _1:
-    if(isSuffix()) {
-        goto _1;
-    }
-    if(isSymbol(' ')) {
-        next(1);
+    curObj = curObj->makeChild(CLASS_TYPE);
+    if(isApplication(false)) {
         goto _2;
     }
-    goto _end;
-_2:
-    if(isApplication()) {
-        goto _1;
-    }
     if(isScope()) {
-        goto _1;
+        goto _2;
     }
     if(isAbstraction()) {
-        goto _1;
+        goto _2;
     }
     if(isMethod()) {
-        goto _1;
+        goto _2;
     }
     if(isHas()) {
-        goto _1;
+        goto _2;
     }
     return errorMessage("htail expected");
+_2:
+    curObj = tmpObj;
+    if(isSymbol(' ')) {
+        next(1);
+        goto _1;
+    }
+    goto _end;
 _end:
 #ifdef DEBUG
     debugMessage("This is htail");
 #endif
+    curObj = tmpObj;
+    curObj->swapWithParent();
     return true;
 }
 
 // head ::= ['...'] (name [''' | '.'] | data | '@' | '$' | '&' | '^' | '*')
-bool parser::isHead() {
+bool Parser::isHead() {
     std::string tmpValue = "";
     if(str[pos]   == '.' &&
        str[pos+1] == '.' &&
@@ -551,11 +578,13 @@ bool parser::isHead() {
         next(3);
     }
     if(isSymbol('Q')) {
+        dataType = REF_TYPE;
         tmpValue += str[pos];
         next(1);
         goto _1;
     }
     if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&') || isSymbol('*')){
+        dataType = REF_TYPE;
         tmpValue = str[pos];
         next(1);
         goto _2;
@@ -565,6 +594,7 @@ bool parser::isHead() {
         goto _end;
     }
     if(isName()){
+        dataType = VAR_TYPE;
         tmpValue += lexValue;
         goto _3;
     }
@@ -602,7 +632,7 @@ _end:
 }
 
 // name ::= /[a-z]/ {ANY}
-bool parser::isName() {
+bool Parser::isName() {
     if(isLetter()) {
         lexValue = str[pos];
         next(1);
@@ -627,7 +657,7 @@ _1:
 }
 
 // data ::= bytes | string | integer | char | float | regex
-bool parser::isData() {
+bool Parser::isData() {
     return isBool()
     || isFloat()
     || isBytes()
@@ -639,7 +669,7 @@ bool parser::isData() {
 }
 
 // bytes ::= byte {'-' byte} | '--'
-bool parser::isBytes() {
+bool Parser::isBytes() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
@@ -678,11 +708,12 @@ _end:
     debugMessage("This is bytes");
 #endif
     lexValue = tmpValue;
+    dataType = BYTES_TYPE;
     return true;
 }
 
 // byte ::= /[\dA-F][\dA-F]/
-bool parser::isByte() {
+bool Parser::isByte() {
     if(((str[pos] >= '0' && str[pos] <= '9') || (str[pos] >= 'A' && str[pos] <= 'F')) &&
        ((str[pos+1] >= '0' && str[pos+1] <= '9') || (str[pos+1] >= 'A' && str[pos+1] <= 'F'))) {
         lexValue = "" + str[pos] + str[pos+1];
@@ -692,7 +723,7 @@ bool parser::isByte() {
     return false;
 }
 
-bool parser::isText() {
+bool Parser::isText() {
     int tmpSpaces = spaces[line];
     std::string tmpValue = "";
     if(str[pos]   == '"' &&
@@ -739,11 +770,12 @@ _end:
     debugMessage("This is text");
 #endif
     lexValue = tmpValue;
+    dataType = TEXT_TYPE;
     return true;
 }
 
 // string ::= /"[^"]*"/
-bool parser::isString() {
+bool Parser::isString() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
@@ -772,11 +804,12 @@ _1:
     debugMessage("This is string");
 #endif
     lexValue = tmpValue;
+    dataType = STRING_TYPE;
     return true;
 }
 
 // integer ::= /[+-]?\d+|0x[a-f\d]+/
-bool parser::isInteger() {
+bool Parser::isInteger() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
@@ -831,11 +864,12 @@ _end:
     debugMessage("This is integer");
 #endif
     lexValue = tmpValue;
+    dataType = INT_TYPE;
     return true;
 }
 
 // char ::= /'\?[^']'/
-bool parser::isChar() {
+bool Parser::isChar() {
     std::string tmpValue = "";
     if(isSymbol('\'')) {
         tmpValue += str[pos];
@@ -873,11 +907,12 @@ _end:
     debugMessage("This is char");
 #endif
     lexValue = tmpValue;
+    dataType = CHAR_TYPE;
     return true;
 }
 
 // regex ::= //.+/[a-z]*/
-bool parser::isRegex() {
+bool Parser::isRegex() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
@@ -916,12 +951,13 @@ _2:
     debugMessage("This is regex");
 #endif
     lexValue = tmpValue;
+    dataType = REGEX_TYPE;
     return true;
 }
 
 // float ::=  /[+-]?\d+(\.\d*)?/ [exp]
 // exp ::= /e(+|-)?\d+/
-bool parser::isFloat() {
+bool Parser::isFloat() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
@@ -1000,16 +1036,18 @@ _end:
     debugMessage("This is float");
 #endif
     lexValue = tmpValue;
+    dataType = FLOAT_TYPE;
     return true;
 }
 
 // bool ::= 'TRUE' | 'FALSE'
-bool parser::isBool() {
+bool Parser::isBool() {
     if (str[pos]   == 'T' &&
         str[pos+1] == 'R' &&
         str[pos+2] == 'U' &&
         str[pos+3] == 'E') {
         next(4);
+        lexValue = "true";
         goto _end;
     }
     if (str[pos]   == 'F' &&
@@ -1018,6 +1056,7 @@ bool parser::isBool() {
         str[pos+3] == 'S' &&
         str[pos+4] == 'E') {
         next(5);
+        lexValue = "false";
         goto _end;
     }
     return false;
@@ -1025,11 +1064,12 @@ _end:
 #ifdef DEBUG
     debugMessage("This is bool");
 #endif
+    dataType = BOOL_TYPE;
     return true;
 }
 
 // comment ::= '#' {ANY} EOL
-bool parser::isComment() {
+bool Parser::isComment() {
     if(isSymbol('#')) {
         next(1);
         goto _1;
@@ -1043,7 +1083,7 @@ _1:
     return true;
 }
 
-bool parser::isEscapeSequence() {
+bool Parser::isEscapeSequence() {
     std::string tmpValue = "";
     if(isSymbol('\\')) {
         tmpValue += str[pos];
@@ -1090,7 +1130,7 @@ _end:
 }
 
 // EOL ::= [\r] \n
-bool parser::isEOL() {
+bool Parser::isEOL() {
     if(isSymbol('\r')) {
         next(1);
     }
@@ -1115,33 +1155,17 @@ _1:
     return true;
 }
 
-void parser::ignore() {
-_0:
-    if(isSymbol(' ')
-       || isSymbol('\t')
-       || isSymbol('\r')) {
-        next(1);
-        goto _0;
-    }
-    if(isEOL()) {
-        goto _0;
-    }
-    if(isComment()) {
-        goto _0;
-    }
-}
-
-bool parser::errorMessage(std::string&& messageText) {
+bool Parser::errorMessage(std::string&& messageText) {
     hasError = true;
     printMessage(std::move(messageText), "error");
     return false;
 }
 
-void parser::debugMessage(std::string&& messageText) {
+void Parser::debugMessage(std::string&& messageText) {
     printMessage(std::move(messageText), "debug");
 }
 
-void parser::printMessage(std::string&& messageText, std::string&& messageType) {
+void Parser::printMessage(std::string&& messageText, std::string&& messageType) {
     std::cout << path << ":"
          << line << ":"
          << column << ": " << messageType << ": "

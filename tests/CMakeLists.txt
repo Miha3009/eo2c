@@ -1,6 +1,6 @@
 add_executable(parser_test parser_test.cpp)
 
-target_link_libraries(parser_test parser)
+target_link_libraries(parser_test model parser)
 
 add_test(
   NAME
