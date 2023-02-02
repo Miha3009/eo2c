@@ -1,8 +1,8 @@
 #include <iostream>
 #include "parser.h"
 
-bool parse(const char* str, std::string path, Object* root) {
-    Parser p(str, path, root);
+bool parse(const char* str, std::string path, Object* root, std::vector<Meta>& metas) {
+    Parser p(str, path, root, metas);
     bool result = p.isProgram();
 #ifdef DEBUG
     if(result) {
@@ -14,10 +14,9 @@ bool parse(const char* str, std::string path, Object* root) {
     return result;
 }
 
-Parser::Parser(const char* str, std::string path, Object* root): str{str}, path{path},
-    pos{0}, line{1}, column{1}, root{root}
+Parser::Parser(const char* str, std::string path, Object* root, std::vector<Meta>& metas): str{str}, path{path},
+    pos{0}, line{1}, column{1}, root{root}, metas{metas}
 {
-    root->setName("root");
     int p = 0;
     spaces = {0, 0};
     while(str[p] != '\0') {
@@ -73,7 +72,7 @@ _end:
 
 // metas ::= {meta} EOL
 bool Parser::isMetas() {
-    if(isMeta()){
+    if(isMeta()) {
         goto _1;
     }
     return false;
@@ -94,13 +93,16 @@ _end:
 
 // meta ::= '#' name [' ' ANY {ANY}] EOL
 bool Parser::isMeta() {
-    if(isSymbol('+')){
+    std::string type;
+    if(isSymbol('+')) {
         next(1);
         goto _1;
     }
     return false;
 _1:
     if(isName()) {
+        type = lexValue;
+        lexValue = "";
         goto _2;
     }
     return errorMessage("meta name expected");
@@ -112,6 +114,7 @@ _2:
     goto _4;
 _3:
     if(!isEOL()) {
+        lexValue += str[pos];
         next(1);
         goto _3;
     }
@@ -125,6 +128,7 @@ _end:
 #ifdef DEBUG
     debugMessage("This is meta");
 #endif
+    metas.push_back({type, lexValue});
     return true;
 }
 
@@ -152,7 +156,7 @@ _2:
     }
 _3:
     curObj = root;
-    if(isObject()){
+    if(isObject()) {
         goto _1;
     }
     return errorMessage("Object or end of file expected");
@@ -228,6 +232,7 @@ _1:
     return false;
 _2:
     if(isObject()) {
+        curObj->updateInverseNotaion();
         goto _4;
     }
     return errorMessage("object expected");
@@ -266,6 +271,8 @@ bool Parser::isMethod() {
     return false;
 _1:
     if(isName()) {
+        Object* tmpObj = curObj->makeChild(METHOD_TYPE);
+        tmpObj->setValue(lexValue);
         goto _2;
     }
     if(isSymbol('&') || isSymbol('<') || isSymbol('^') || isSymbol('@')) {
@@ -309,16 +316,18 @@ _3:
     goto _end;
 _4:
     if(str[pos]   == ' ' &&
-       str[pos+1] == '/') {
+            str[pos+1] == '/') {
         next(2);
         goto _5;
     }
     goto _end;
 _5:
     if(isName()) {
+        curObj->setAtom();
         goto _end;
     }
     if(isSymbol('?')) {
+        curObj->setAtom();
         next(1);
         goto _end;
     }
@@ -344,8 +353,8 @@ _1:
     }
     goto _2;
 _2:
-    if(isAttribute()){
-        curObj->addAttribute(std::move(lexValue));
+    if(isAttribute()) {
+        curObj->addAttribute(lexValue);
         goto _3;
     }
     return errorMessage("attribute or ']' expected");;
@@ -381,8 +390,8 @@ bool Parser::isAttribute() {
     return false;
 _1:
     if(str[pos]   == '.' &&
-       str[pos+1] == '.' &&
-       str[pos+2] == '.') {
+            str[pos+1] == '.' &&
+            str[pos+2] == '.') {
         tmpValue += "...";
         next(3);
         goto _end;
@@ -400,18 +409,22 @@ _end:
 bool Parser::isSuffix() {
     std::string tmpValue;
     if(str[pos]   == ' ' &&
-       str[pos+1] == '>' &&
-       str[pos+2] == ' ') {
+            str[pos+1] == '>' &&
+            str[pos+2] == ' ') {
         next(3);
         goto _1;
     }
     return false;
 _1:
     if(isAttribute()) {
-        if(curObj->getParent()->getType() == HTAIL_TYPE) {
-            curObj->getParent()->setName(lexValue);
-        } else {
+        if(curObj->getType() == CLASS_TYPE) {
             curObj->setName(lexValue);
+        } else {
+            Object* tmpObj = curObj;
+            while(tmpObj->getParent()->getType() != CLASS_TYPE) {
+                tmpObj = tmpObj->getParent();
+            }
+            tmpObj->setName(lexValue);
         }
         goto _2;
     }
@@ -452,20 +465,25 @@ _end:
 // application ::= head [htail]
 bool Parser::isApplication(bool parseHtail) {
     Object* tmpObj = curObj;
+    if(parseHtail) {
+        curObj->setType(APPLICATION_TYPE);
+        curObj = curObj->makeChild();
+    }
     if(isHead()) {
-        curObj->setValue(lexValue);
         curObj->setType(dataType);
+        curObj->setValue(lexValue);
         goto _1;
     }
     if(isScope()) {
         goto _2;
     }
+    delete curObj;
+    curObj = tmpObj;
     return false;
 _1:
     if(isHead()) {
-        curObj = curObj->makeChild(CLASS_TYPE);
+        curObj = curObj->makeChild(dataType);
         curObj->setValue(lexValue);
-        curObj->setType(dataType);
         goto _1;
     }
     if(isScope()) {
@@ -484,8 +502,11 @@ _2:
     }
     goto _3;
 _3:
-    if(parseHtail && isHtail()) {
-        goto _end;
+    if(parseHtail) {
+        curObj = tmpObj;
+        if(isHtail()) {
+            goto _end;
+        }
     }
     goto _end;
 _end:
@@ -504,8 +525,6 @@ bool Parser::isScope() {
     }
     return false;
 _1:
-    curObj->setType(SCOPE_TYPE);
-    curObj = curObj->makeChild(CLASS_TYPE);
     if(isApplication(true)) {
         goto _2;
     }
@@ -526,10 +545,8 @@ _end:
 
 // htail ::= ' ' ('(' application ')' | application (ref | ':' name | suffix | ' ' application))
 bool Parser::isHtail() {
-    Object* tmpObj;
+    Object* tmpObj = curObj;
     if(isSymbol(' ')) {
-        curObj = curObj->makeChild(HTAIL_TYPE);
-        tmpObj = curObj;
         next(1);
         goto _1;
     }
@@ -564,7 +581,6 @@ _end:
     debugMessage("This is htail");
 #endif
     curObj = tmpObj;
-    curObj->swapWithParent();
     return true;
 }
 
@@ -572,8 +588,8 @@ _end:
 bool Parser::isHead() {
     std::string tmpValue = "";
     if(str[pos]   == '.' &&
-       str[pos+1] == '.' &&
-       str[pos+2] == '.'){
+            str[pos+1] == '.' &&
+            str[pos+2] == '.') {
         tmpValue += "...";
         next(3);
     }
@@ -583,17 +599,17 @@ bool Parser::isHead() {
         next(1);
         goto _1;
     }
-    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&') || isSymbol('*')){
+    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&') || isSymbol('*')) {
         dataType = REF_TYPE;
         tmpValue = str[pos];
         next(1);
         goto _2;
     }
-    if(isData()){
+    if(isData()) {
         tmpValue = lexValue;
         goto _end;
     }
-    if(isName()){
+    if(isName()) {
         dataType = VAR_TYPE;
         tmpValue += lexValue;
         goto _3;
@@ -611,13 +627,12 @@ _1:
     goto _end;
 _2:
     if(isSymbol('.')) {
-        tmpValue += ".";
         next(1);
         goto _end;
     }
     goto _end;
 _3:
-    if(isSymbol('\'') || isSymbol('.')){
+    if(isSymbol('\'') || isSymbol('.')) {
         tmpValue += str[pos];
         next(1);
         goto _end;
@@ -641,12 +656,12 @@ bool Parser::isName() {
     return false;
 _1:
     while(!isSymbol(' ') &&
-          !isSymbol('\n') &&
-          !isSymbol('\r') &&
-          !isSymbol('\0') &&
-          !isSymbol(']') &&
-          !isSymbol(')') &&
-          !isSymbol('.')) {
+            !isSymbol('\n') &&
+            !isSymbol('\r') &&
+            !isSymbol('\0') &&
+            !isSymbol(']') &&
+            !isSymbol(')') &&
+            !isSymbol('.')) {
         lexValue+= str[pos];
         next(1);
     }
@@ -659,33 +674,33 @@ _1:
 // data ::= bytes | string | integer | char | float | regex
 bool Parser::isData() {
     return isBool()
-    || isFloat()
-    || isBytes()
-    || isInteger()
-    || isText()
-    || isString()
-    || isChar()
-    || isRegex();
+           || isFloat()
+           || isBytes()
+           || isInteger()
+           || isText()
+           || isString()
+           || isChar()
+           || isRegex();
 }
 
 // bytes ::= byte {'-' byte} | '--'
 bool Parser::isBytes() {
     Location l;
     storeLocation(l);
-    std::string tmpValue = "";
     if(str[pos] == '-' && str[pos+1] == '-') {
-        tmpValue += "--";
+        Object* tmpObj = curObj->makeChild(BYTE_TYPE);
+        tmpObj->setValue("00");
         next(2);
         goto _end;
     }
     if(isByte()) {
-        tmpValue += lexValue;
         goto _1;
     }
     return false;
 _1:
-    if(isSymbol('-')){
-        tmpValue += str[pos];
+    if(isSymbol('-')) {
+        Object* tmpObj = curObj->makeChild(BYTE_TYPE);
+        tmpObj->setValue(lexValue);
         next(1);
         goto _2;
     }
@@ -693,13 +708,13 @@ _1:
     return false;
 _2:
     if(isByte()) {
-        tmpValue += lexValue;
         goto _3;
     }
     goto _end;
 _3:
-    if(isSymbol('-')){
-        tmpValue += str[pos];
+    if(isSymbol('-')) {
+        Object* tmpObj = curObj->makeChild(BYTE_TYPE);
+        tmpObj->setValue(lexValue);
         next(1);
         goto _2;
     }
@@ -707,7 +722,7 @@ _end:
 #ifdef DEBUG
     debugMessage("This is bytes");
 #endif
-    lexValue = tmpValue;
+    lexValue = "";
     dataType = BYTES_TYPE;
     return true;
 }
@@ -715,8 +730,8 @@ _end:
 // byte ::= /[\dA-F][\dA-F]/
 bool Parser::isByte() {
     if(((str[pos] >= '0' && str[pos] <= '9') || (str[pos] >= 'A' && str[pos] <= 'F')) &&
-       ((str[pos+1] >= '0' && str[pos+1] <= '9') || (str[pos+1] >= 'A' && str[pos+1] <= 'F'))) {
-        lexValue = "" + str[pos] + str[pos+1];
+            ((str[pos+1] >= '0' && str[pos+1] <= '9') || (str[pos+1] >= 'A' && str[pos+1] <= 'F'))) {
+        lexValue = std::string({(char)std::tolower(str[pos]), (char)std::tolower(str[pos+1])});
         next(2);
         return true;
     }
@@ -727,8 +742,8 @@ bool Parser::isText() {
     int tmpSpaces = spaces[line];
     std::string tmpValue = "";
     if(str[pos]   == '"' &&
-       str[pos+1] == '"' &&
-       str[pos+2] == '"') {
+            str[pos+1] == '"' &&
+            str[pos+2] == '"') {
         tmpValue += "\"\"\"";
         next(3);
         goto _1;
@@ -736,8 +751,8 @@ bool Parser::isText() {
     return false;
 _1:
     if(str[pos]   == '"' &&
-       str[pos+1] == '"' &&
-       str[pos+2] == '"') {
+            str[pos+1] == '"' &&
+            str[pos+2] == '"') {
         tmpValue += "\"\"\"";
         next(3);
         goto _end;
@@ -779,14 +794,14 @@ bool Parser::isString() {
     Location l;
     storeLocation(l);
     std::string tmpValue = "";
-    if(isSymbol('"')){
+    if(isSymbol('"')) {
         tmpValue += str[pos];
         next(1);
         goto _1;
     }
     return false;
 _1:
-    while(!isSymbol('"')){
+    while(!isSymbol('"')) {
         if(isEOL()) {
             restoreLocation(l);
             return errorMessage("Unexpected end of line. '\"' expected");
@@ -884,7 +899,7 @@ _1:
         goto _2;
     }
     if(isEOL()) return errorMessage("Unexpected end of line");
-    if(!isSymbol('\'')){
+    if(!isSymbol('\'')) {
         tmpValue += str[pos];
         next(1);
         goto _3;
@@ -927,7 +942,6 @@ _1:
         restoreLocation(l);
         return false;
     }
-
     while(!isSymbol('/')) {
         if(isEOL()) {
             return errorMessage("Unexpected end of line. '/' expected");
@@ -1043,18 +1057,18 @@ _end:
 // bool ::= 'TRUE' | 'FALSE'
 bool Parser::isBool() {
     if (str[pos]   == 'T' &&
-        str[pos+1] == 'R' &&
-        str[pos+2] == 'U' &&
-        str[pos+3] == 'E') {
+            str[pos+1] == 'R' &&
+            str[pos+2] == 'U' &&
+            str[pos+3] == 'E') {
         next(4);
         lexValue = "true";
         goto _end;
     }
     if (str[pos]   == 'F' &&
-        str[pos+1] == 'A' &&
-        str[pos+2] == 'L' &&
-        str[pos+3] == 'S' &&
-        str[pos+4] == 'E') {
+            str[pos+1] == 'A' &&
+            str[pos+2] == 'L' &&
+            str[pos+3] == 'S' &&
+            str[pos+4] == 'E') {
         next(5);
         lexValue = "false";
         goto _end;
@@ -1093,7 +1107,7 @@ bool Parser::isEscapeSequence() {
     return false;
 _1:
     if(isSymbol('b') || isSymbol('t') || isSymbol('n') || isSymbol('f') ||
-       isSymbol('r') || isSymbol('\'') || isSymbol('"') || isSymbol('\\')) {
+            isSymbol('r') || isSymbol('\'') || isSymbol('"') || isSymbol('\\')) {
         tmpValue += str[pos];
         next(1);
         goto _end;
@@ -1167,9 +1181,9 @@ void Parser::debugMessage(std::string&& messageText) {
 
 void Parser::printMessage(std::string&& messageText, std::string&& messageType) {
     std::cout << path << ":"
-         << line << ":"
-         << column << ": " << messageType << ": "
-         << messageText << "\n";
+              << line << ":"
+              << column << ": " << messageType << ": "
+              << messageText << "\n";
     int printPos = pos - column + 1;
     while(str[printPos] != '\n' && str[printPos] != '\0') {
         std::cout << str[printPos];

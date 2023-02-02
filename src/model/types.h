@@ -1,14 +1,15 @@
-//#ifndef TYPES_H
-//#define TYPES_H
+#ifndef TYPES_H
+#define TYPES_H
 
 enum objectType {
     CLASS_TYPE,
+    APPLICATION_TYPE,
     REF_TYPE,
     VAR_TYPE,
-    SCOPE_TYPE,
-    HTAIL_TYPE,
+    METHOD_TYPE,
     BOOL_TYPE,
     BYTES_TYPE,
+    BYTE_TYPE,
     INT_TYPE,
     FLOAT_TYPE,
     TEXT_TYPE,
@@ -19,12 +20,13 @@ enum objectType {
 
 static const char* objectTypeNames[] {
     "class",
+    "application",
     "ref",
     "var",
-    "scope",
-    "htail",
+    "method",
     "bool",
     "bytes",
+    "byte",
     "int",
     "float",
     "text",
@@ -33,4 +35,4 @@ static const char* objectTypeNames[] {
     "regex"
 };
 
-//#endif // TYPES_H
+#endif // TYPES_H
