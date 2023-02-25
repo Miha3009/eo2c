@@ -271,11 +271,11 @@ bool Parser::isMethod() {
     return false;
 _1:
     if(isName()) {
-        Object* tmpObj = curObj->makeChild(METHOD_TYPE);
-        tmpObj->setValue(lexValue);
+        curObj->addToSequence(VAR_TYPE, lexValue);
         goto _2;
     }
     if(isSymbol('&') || isSymbol('<') || isSymbol('^') || isSymbol('@')) {
+        curObj->addToSequence(REF_TYPE, std::to_string(str[pos]));
         next(1);
         goto _2;
     }
@@ -482,8 +482,7 @@ bool Parser::isApplication(bool parseHtail) {
     return false;
 _1:
     if(isHead()) {
-        curObj = curObj->makeChild(dataType);
-        curObj->setValue(lexValue);
+        curObj->addToSequence(dataType, lexValue);
         goto _1;
     }
     if(isScope()) {
@@ -599,9 +598,14 @@ bool Parser::isHead() {
         next(1);
         goto _1;
     }
-    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&') || isSymbol('*')) {
+    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&')) {
         dataType = REF_TYPE;
         tmpValue = str[pos];
+        next(1);
+        goto _2;
+    }
+    if(isSymbol('*')) {
+        dataType = ARRAY_TYPE;
         next(1);
         goto _2;
     }

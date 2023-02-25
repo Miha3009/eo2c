@@ -16,5 +16,6 @@ target_link_libraries(compiler
   PRIVATE
     parser
     model
+    optimizer
     generator
 )

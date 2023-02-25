@@ -4,9 +4,9 @@
 enum objectType {
     CLASS_TYPE,
     APPLICATION_TYPE,
+    SEQUENCE_TYPE,
     REF_TYPE,
     VAR_TYPE,
-    METHOD_TYPE,
     BOOL_TYPE,
     BYTES_TYPE,
     BYTE_TYPE,
@@ -15,15 +15,16 @@ enum objectType {
     TEXT_TYPE,
     STRING_TYPE,
     CHAR_TYPE,
-    REGEX_TYPE
+    REGEX_TYPE,
+    ARRAY_TYPE
 };
 
 static const char* objectTypeNames[] {
     "class",
     "application",
+    "sequence",
     "ref",
     "var",
-    "method",
     "bool",
     "bytes",
     "byte",
@@ -32,7 +33,8 @@ static const char* objectTypeNames[] {
     "text",
     "string",
     "char",
-    "regex"
+    "regex",
+    "array"
 };
 
 #endif // TYPES_H

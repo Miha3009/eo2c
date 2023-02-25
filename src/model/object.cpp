@@ -7,6 +7,7 @@ Object::Object(Object* parent, objectType type) {
     this->parent = parent;
     this->atom = false;
     this->clone = false;
+    this->vararg = false;
 }
 
 Object::~Object() {
@@ -31,12 +32,24 @@ Object* Object::makeChild(objectType type) {
     return child;
 }
 
+void Object::addChild(Object* child) {
+    children.push_back(child);
+    child->setParent(this);
+}
+
+void Object::setChildren(std::vector<Object*> children) {
+    this->children = children;
+    for(Object* child : children) {
+        child->setParent(this);
+    }
+}
+
 void Object::clearChildren() {
     children.clear();
 }
 
 void Object::setName(std::string name) {
-    this->name = convertName(name);
+    this->name = name;
 }
 
 void Object::setValue(std::string value) {
@@ -46,19 +59,16 @@ void Object::setValue(std::string value) {
             this->clone = true;
             value = value.substr(0, l-1);
         }
+        if(l > 3 && value[0] == '.' && value[1] == '.' && value[2] == '.') {
+            this->vararg = true;
+            value = value.substr(3);
+        }
     }
     this->value = value;
 }
 
 void Object::setType(objectType type) {
     this->type = type;
-}
-
-void Object::setChildren(std::vector<Object*> children) {
-    this->children = children;
-    for(Object* child : children) {
-        child->setParent(this);
-    }
 }
 
 void Object::setParent(Object* parent) {
@@ -76,15 +86,35 @@ void Object::addAttribute(std::string name) {
         name = name.substr(0, l-3);
         isVararg = true;
     }
-    attributes.push_back({convertName(name), isVararg});
+    attributes.push_back({name, isVararg});
+}
+
+void Object::setAttributes(std::vector<Attribute> attributes) {
+    this->attributes = attributes;
 }
 
 void Object::updateInverseNotaion() {
-    if(children.size() >= 2 && (children[0]->type == VAR_TYPE || children[0]->type == REF_TYPE) && endsWithDot(children[0]->getValue())) {
-        children[0]->type = METHOD_TYPE;
+/*    if(children.size() >= 2 && (children[0]->type == VAR_TYPE || children[0]->type == REF_TYPE) && endsWithDot(children[0]->getValue())) {
         children[1]->children.push_back(children[0]);
+        if(children[1]->getApplicationAttributes().empty()) {
+            children[1]->setType(SEQUENCE_TYPE);
+        }
         children.erase(children.begin());
+    }*/
+}
+
+void Object::addToSequence(objectType type, std::string value) {
+    if(this->type != SEQUENCE_TYPE) {
+        Object* child = new Object(this, this->type);
+        child->setValue(this->value);
+        child->setChildren(this->children);
+        this->type = SEQUENCE_TYPE;
+        this->value = "";
+        this->children.clear();
+        this->children.push_back(child);
     }
+    Object* child = makeChild(type);
+    child->setValue(value);
 }
 
 bool Object::validate() {
@@ -102,6 +132,10 @@ bool Object::isAtom() {
 
 bool Object::isClone() {
     return clone;
+}
+
+bool Object::isVararg() {
+    return vararg;
 }
 
 bool Object::isDecorator() {
@@ -161,19 +195,9 @@ Object* Object::getApplicationHead() {
 std::vector<Object*> Object::getApplicationAttributes() {
     std::vector<Object*> result;
     for(int i = 1; i < children.size(); ++i) {
-        if(children[i]->type == METHOD_TYPE) {
-            break;
-        }
         result.push_back(children[i]);
     }
     return result;
-}
-
-Object* Object::getApplicationMethod() {
-    if(children.size() > 0 && children.back()->getType() == METHOD_TYPE) {
-        return children[children.size()-1];
-    }
-    return nullptr;
 }
 
 bool Object::validate(std::unordered_set<std::string>& context) {
@@ -238,82 +262,5 @@ void Object::printDebug(int s) {
     std::cout << "\n";
     for(Object* child : children) {
         child->printDebug(s+2);
-    }
-}
-
-Object* optimize(Object* obj) {
-    std::vector<Object*> children = obj->getChildren();
-    for(int i = 0; i < children.size(); ++i) {
-        children[i] = optimize(children[i]);
-    }
-    obj->setChildren(children);
-    if(endsWithDot(obj->getValue())) {
-        obj->setValue(obj->getValue().substr(0, obj->getValue().length()-1));
-    }
-    if(!obj->isRoot() && (obj->getParent()->getType() == VAR_TYPE || obj->getParent()->getType() == REF_TYPE)) {
-        obj->setType(METHOD_TYPE);
-    }
-    if(obj->getType() == VAR_TYPE || obj->getType() == METHOD_TYPE) {
-        obj->setValue(convertName(obj->getValue()));
-    }
-    if(children.size() == 1) {
-        if(obj->isRoot()) {
-            Object* tmpObj = children[0];
-            tmpObj->setParent(nullptr);
-            obj->clearChildren();
-            delete obj;
-            return tmpObj;
-        }
-        if(obj->getType() == APPLICATION_TYPE) {
-            if(children[0]->getType() == APPLICATION_TYPE) {
-                Object* tmpObj = children[0];
-                obj->setChildren(tmpObj->getChildren());
-                tmpObj->clearChildren();
-                delete tmpObj;
-            } else if(obj->getParent()->getType() == APPLICATION_TYPE){
-                Object* tmpObj = children[0];
-                obj->clearChildren();
-                delete obj;
-                return tmpObj;
-            }
-        }
-    }
-    return obj;
-}
-
-std::string convertName(std::string name) {
-    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char"};
-    if(std::find(keywords.begin(), keywords.end(), name) != keywords.end()) {
-        return "EO_" + name;
-    }
-    for(int i = 0; i < name.length(); ++i) {
-        if((name[i] < 'a' || name[i] > 'z') &&
-                (name[i] < 'A' || name[i] > 'Z') &&
-                (name[i] < '0' || name[i] > '9') &&
-                name[i] !='@') {
-            name[i] = '_';
-        }
-    }
-    return name;
-}
-
-bool endsWithDot(std::string str) {
-    return str.length() > 0 && str[str.length()-1] == '.';
-}
-
-void updateNameTagTable(Object* obj, std::unordered_map<std::string, int>& nameTagTable) {
-    if(obj->getType() == VAR_TYPE || obj->getType() == METHOD_TYPE) {
-        if(!nameTagTable.count(obj->getValue())) {
-            std::cout << obj->getValue() << " : " << nameTagTable.size() << "\n";
-            nameTagTable[obj->getValue()] = nameTagTable.size();
-        }
-    } else if(obj->getType() == CLASS_TYPE) {
-        if(!nameTagTable.count(obj->getName())) {
-            std::cout << obj->getName() << " : " << nameTagTable.size() << "\n";
-            nameTagTable[obj->getName()] = nameTagTable.size();
-        }
-    }
-    for(Object* child : obj->getChildren()) {
-        updateNameTagTable(child, nameTagTable);
     }
 }

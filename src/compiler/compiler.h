@@ -8,13 +8,10 @@
 typedef std::filesystem::path path;
 
 void compile(path sources, std::optional<path> buildPath);
-
 path getFileBuildPath(path file, path sources, std::optional<path> buildPath);
-
-std::vector<path> find_files(path& sources);
-
+std::vector<path> findFiles(path& sources);
 std::string readFile(path& file);
-
-bool need_update(path& source, path& build);
+bool needUpdate(path& source, path& build);
+std::string getFilename(path file);
 
 #endif // COMPILER_H

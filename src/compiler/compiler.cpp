@@ -2,47 +2,48 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cstdlib>
 #include "compiler.h"
 #include "parser.h"
 #include "object.h"
+#include "optimizer.h"
 #include "generator.h"
 
-#define DEBUG
-
 void compile(path sources, std::optional<path> buildPath) {
-    std::vector<path> files = find_files(sources);
-    std::vector<Object*> objects;
-    std::vector<std::vector<Meta>> metas;
-    std::unordered_map<std::string, int> nameTagTable;
-    for(path file : files) {
-        Object* obj = new Object(nullptr, CLASS_TYPE);
-        std::vector<Meta> meta;
-        if(!parse(readFile(file).c_str(), file.string(), obj, meta)) {
+    std::vector<path> files = findFiles(sources);
+    std::vector<Object*> objects(files.size());
+    std::vector<std::vector<Meta>> metas(files.size());
+    for(int i = 0; i < files.size(); ++i) {
+        objects[i] = new Object(nullptr, CLASS_TYPE);
+        objects[i]->setName(getFilename(files[i]));
+        if(!parse(readFile(files[i]).c_str(), files[i].string(), objects[i], metas[i])) {
             return;
         }
-        if(!obj->validate()) {
-            return;
-        }
-        objects.push_back(optimize(obj));
-        updateNameTagTable(objects.back(), nameTagTable);
-        metas.push_back(meta);
-#ifdef DEBUG
-        objects.back()->printDebug();
-#endif
     }
+    Optimizer optimizer(objects);
+    if(!optimizer.run()) {
+        return;
+    }
+    objects = optimizer.getObjects();
     for(int i = 0; i < objects.size(); ++i) {
         path fileBuildPath = getFileBuildPath(files[i], sources, buildPath);
-        if(need_update(fileBuildPath, files[i]) && !gen(objects[i], metas[i], fileBuildPath, nameTagTable)) {
+        if(needUpdate(fileBuildPath, files[i]) && !gen(objects[i], metas[i], fileBuildPath, optimizer.getNameTagTable())) {
             return;
         }
     }
+    //std::system("make");
 }
 
-std::vector<path> find_files(path& sources) {
+std::vector<path> findFiles(path& sources) {
     if(!std::filesystem::is_directory(sources)) {
         return {sources};
     }
     std::vector<path> files;
+    for(auto const& file : std::filesystem::recursive_directory_iterator(sources)) {
+        if(file.is_regular_file() && file.path().extension() == ".eo") {
+            files.push_back(file.path());
+        }
+    }
     for(auto const& file : std::filesystem::recursive_directory_iterator(sources)) {
         if(file.is_regular_file() && file.path().extension() == ".eo") {
             files.push_back(file.path());
@@ -73,7 +74,7 @@ std::string readFile(path& file) {
     return ss.str();
 }
 
-bool need_update(path& source, path& build) {
+bool needUpdate(path& source, path& build) {
     return true;
     build.replace_extension("cpp");
     if(!std::filesystem::exists(build)) {
@@ -82,4 +83,9 @@ bool need_update(path& source, path& build) {
     auto source_time = std::filesystem::last_write_time(source);
     auto build_time = std::filesystem::last_write_time(build);
     return source_time > build_time;
+}
+
+std::string getFilename(path file) {
+    file.replace_extension("");
+    return file.filename().string();
 }
