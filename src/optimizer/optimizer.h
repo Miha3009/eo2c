@@ -3,16 +3,16 @@
 
 #include <vector>
 #include "object.h"
+#include "translation_unit.h"
+#include "id_tag_table.h"
 
 class Optimizer {
-    std::vector<Object*> objects;
-    std::unordered_map<std::string, int> nameTagTable;
+    TranslationUnit& unit;
+    IdTagTable& idTagTable;
 
 public:
-    Optimizer(std::vector<Object*> objects);
+    Optimizer(TranslationUnit& unit, IdTagTable& idTagTable);
     bool run();
-    std::vector<Object*> getObjects();
-    std::unordered_map<std::string, int>& getNameTagTable();
 
 private:
     Object* removeRootWithOneChild(Object* obj);
@@ -20,9 +20,8 @@ private:
     Object* removeReduntObjects(Object* obj);
     void convertIdentifier(Object* obj);
     std::string convertIdentifier(std::string id);
-    void updateNameTagTable(Object* obj);
+    void updateIdTagTable(Object* obj);
     char toHex(int x);
-    bool endsWithDot(std::string str);
 };
 
 #endif // OPTIMIZER_H

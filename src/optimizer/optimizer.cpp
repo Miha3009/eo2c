@@ -2,34 +2,24 @@
 #include <algorithm>
 #include "optimizer.h"
 
-#define DEBUG
+//#define DEBUG
 
-Optimizer::Optimizer(std::vector<Object*> objects_): objects(objects_) {
+Optimizer::Optimizer(TranslationUnit& unit, IdTagTable& idTagTable): unit{unit}, idTagTable{idTagTable} {
 }
 
 bool Optimizer::run() {
-    if(std::any_of(objects.begin(), objects.end(), [](Object* obj){ return !obj->validate(); })) {
+    if(!unit.root->validate()) {
         return false;
     }
-    for(int i = 0; i < objects.size(); ++i) {
-        objects[i] = removeRootWithOneChild(objects[i]);
-        applyInverseNotation(objects[i]);
-        objects[i] = removeReduntObjects(objects[i]);
-        convertIdentifier(objects[i]);
-        updateNameTagTable(objects[i]);
+    unit.root = removeRootWithOneChild(unit.root);
+    applyInverseNotation(unit.root);
+    unit.root = removeReduntObjects(unit.root);
+    convertIdentifier(unit.root);
+    updateIdTagTable(unit.root);
 #ifdef DEBUG
-        objects[i]->printDebug();
+    unit.root->printDebug();
 #endif // DEBUG
-    }
     return true;
-}
-
-std::vector<Object*> Optimizer::getObjects() {
-    return objects;
-}
-
-std::unordered_map<std::string, int>& Optimizer::getNameTagTable() {
-    return nameTagTable;
 }
 
 Object* Optimizer::removeRootWithOneChild(Object* obj) {
@@ -48,9 +38,7 @@ void Optimizer::applyInverseNotation(Object* obj) {
     for(int i = 0; i < children.size(); ++i) {
         applyInverseNotation(children[i]);
     }
-    if(obj->getType() == APPLICATION_TYPE &&
-       (children[0]->getType() == VAR_TYPE || children[0]->getType() == REF_TYPE) &&
-       endsWithDot(children[0]->getValue())) {
+    if(obj->getType() == APPLICATION_TYPE && (children[0]->getType() == VAR_TYPE || children[0]->getType() == REF_TYPE) && children[0]->isDot()) {
         Object* tmpObj = children[0];
         children[0] = new Object(obj, SEQUENCE_TYPE);
         children[0]->addChild(children[1]);
@@ -87,15 +75,8 @@ void Optimizer::convertIdentifier(Object* obj) {
     for(Object* child : obj->getChildren()) {
         convertIdentifier(child);
     }
-    if(endsWithDot(obj->getValue())) {
-        std::string value = obj->getValue();
-        obj->setValue(value.substr(0, value.length()-1));
-    }
-    if(obj->getType() == VAR_TYPE) {
-        obj->setValue(convertIdentifier(obj->getValue()));
-    }
-    if(!obj->getName().empty() && obj->getName() != "@") {
-        obj->setName(convertIdentifier(obj->getName()));
+    if(obj->getType() == CLASS_TYPE || obj->getType() == VAR_TYPE) {
+        obj->setValue(convertIdentifier(obj->getOriginValue()));
     }
     std::vector<Attribute> attributes = obj->getAttributes();
     for(int i = 0; i < attributes.size(); ++i) {
@@ -105,7 +86,7 @@ void Optimizer::convertIdentifier(Object* obj) {
 }
 
 std::string Optimizer::convertIdentifier(std::string id) {
-    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array"};
+    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array", "stdin", "stdout"};
     if(std::find(keywords.begin(), keywords.end(), id) != keywords.end()) {
         return "EO_" + id;
     }
@@ -125,20 +106,15 @@ std::string Optimizer::convertIdentifier(std::string id) {
     return newId;
 }
 
-void Optimizer::updateNameTagTable(Object* obj) {
-    if(obj->getType() == VAR_TYPE) {
-        if(!obj->getValue().empty() && !nameTagTable.count(obj->getValue())) {
-            std::cout << obj->getValue() << " : " << nameTagTable.size() << "\n";
-            nameTagTable[obj->getValue()] = nameTagTable.size();
-        }
-    } else if(obj->getType() == CLASS_TYPE || (obj->getType() == APPLICATION_TYPE && !obj->isDecorator())) {
-        if(!obj->getName().empty() && !nameTagTable.count(obj->getName())) {
-            std::cout << obj->getName() << " : " << nameTagTable.size() << "\n";
-            nameTagTable[obj->getName()] = nameTagTable.size();
-        }
+void Optimizer::updateIdTagTable(Object* obj) {
+    if(obj->getType() == VAR_TYPE || obj->getType() == CLASS_TYPE || (obj->getType() == APPLICATION_TYPE && !obj->isDecorator())) {
+        idTagTable.update(obj->getValue());
+    }
+    for(Attribute& a : obj->getAttributes()) {
+        idTagTable.update(a.name);
     }
     for(Object* child : obj->getChildren()) {
-        updateNameTagTable(child);
+        updateIdTagTable(child);
     }
 }
 
@@ -148,8 +124,4 @@ char Optimizer::toHex(int x) {
     } else {
         return 'A' + (x-10);
     }
-}
-
-bool Optimizer::endsWithDot(std::string str) {
-    return str.length() > 0 && str[str.length()-1] == '.';
 }

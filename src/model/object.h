@@ -18,16 +18,16 @@ struct Attribute {
 };
 
 class Object {
-    std::string name;
-    std::string value;
     objectType type;
+    std::string value;
+    std::string originValue;
     std::vector<Object*> children;
     std::vector<Attribute> attributes;
     Object* parent;
     bool atom;
     bool clone;
     bool vararg;
-    mutable std::string fullName;
+    bool dot;
 
 public:
     Object(Object* parent, objectType type);
@@ -37,24 +37,24 @@ public:
     void addChild(Object* child);
     void setChildren(std::vector<Object*> children);
     void clearChildren();
-    void setName(std::string name);
     void setValue(std::string value);
+    void setOriginValue(std::string value);
     void setType(objectType type);
     void setParent(Object* parent);
     void setAtom();
     void addAttribute(std::string name);
     void setAttributes(std::vector<Attribute> attributes);
-    void updateInverseNotaion();
     void addToSequence(objectType type, std::string value);
     bool validate();
     bool isRoot();
     bool isAtom();
     bool isClone();
     bool isVararg();
+    bool isDot();
     bool isDecorator();
-    std::string getName();
-    std::string getFullName();
+    std::string getClassName();
     std::string getValue();
+    std::string getOriginValue();
     objectType getType();
     std::vector<Object*> getChildren();
     std::vector<Attribute> getAttributes();

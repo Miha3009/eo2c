@@ -3,8 +3,7 @@
 
 #include <vector>
 #include "object.h"
-
-bool parse(const char* str, std::string path, Object* root, std::vector<Meta>& metas);
+#include "translation_unit.h"
 
 struct Location {
     int pos;
@@ -14,7 +13,6 @@ struct Location {
 
 class Parser {
     const char* str = nullptr;
-    std::string path;
     std::vector<int> spaces;
 
     int pos;
@@ -25,11 +23,10 @@ class Parser {
     std::string lexValue;
     objectType dataType;
     Object* curObj;
-    Object* root;
-    std::vector<Meta>& metas;
+    TranslationUnit& unit;
 
 public:
-    Parser(const char* str, std::string path, Object* root, std::vector<Meta>& metas);
+    Parser(TranslationUnit& unit, const char* str);
 
     bool isProgram();
     bool isLicense();

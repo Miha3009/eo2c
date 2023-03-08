@@ -7,8 +7,11 @@
 #include <unordered_map>
 #include <fstream>
 #include <filesystem>
+#include "id_tag_table.h"
+#include "imports_map.h"
+#include "translation_unit.h"
 
-typedef std::string Import;
+namespace fs = std::filesystem;
 
 struct Field {
     std::string type;
@@ -29,16 +32,23 @@ public:
     void addArgument(std::string argument);
 };
 
+enum FunctionType {
+    CHILD,
+    DECORATOR,
+    INNER
+};
+
 class Function {
 public:
     std::string signature;
     std::vector<std::string> body;
     std::string bodyAtom;
     int varCounter;
+    FunctionType type;
 
     Function();
-    void setSignature(std::string signature);
     void addLine(std::string line);
+    void setType(FunctionType type, std::string varname);
     std::string getVar();
     std::string nextVarDeclaration();
     std::string getName();
@@ -47,32 +57,35 @@ public:
 class CodeModel {
     std::ofstream outHeader;
     std::ofstream outSource;
-    std::string name;
-    std::unordered_map<std::string, int>& nameTagTable;
-    std::unordered_set<Import> headerImports;
-    std::unordered_set<Import> sourceImports;
+    std::string filename;
+    TranslationUnit& unit;
+    IdTagTable& idTagTable;
+    ImportsMap& importsMap;
+    std::unordered_set<std::string> sourceImports;
     std::vector<Struct> structs;
     std::vector<Function> functions;
 
 public:
-    CodeModel(std::unordered_map<std::string, int>& nameTagTable);
+    CodeModel(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap);
     ~CodeModel();
-    bool open(std::filesystem::path path);
-    void addHeaderImport(Import import);
-    void addSourceImport(Import import);
+    bool open();
+    void addImport(std::string alias);
+    void addStdImport(std::string import);
     void addStruct(Struct s);
     void addFunction(Function f);
     void addFunctionAtom(std::string path);
-    std::string getName();
-    void write();
+    std::string getFilename();
+    bool write();
     void writeDefineBegin();
     void writeImports();
     void writeStructs();
     void writeOffset();
     void writeFunctions();
     void writeDefineEnd();
-    std::string getTag(std::string name);
+    IdTagTable& getIdTagTable();
+    ImportsMap& getImportsMap();
     std::string getDefine();
+    std::string getClassNameByValue(std::string value);
 };
 
 std::string genVarName(int num);

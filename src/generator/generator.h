@@ -5,19 +5,22 @@
 #include <filesystem>
 #include <unordered_map>
 #include "object.h"
+#include "translation_unit.h"
 #include "code_model.h"
+#include "id_tag_table.h"
+#include "imports_map.h"
 
-bool gen(Object* root, std::vector<Meta> metas, std::filesystem::path path, std::unordered_map<std::string, int>& nameTagTable);
+namespace fs = std::filesystem;
 
 class Generator {
-    Object* root;
-    CodeModel& codeModel;
+    TranslationUnit& unit;
+    CodeModel codeModel;
     Function curFunction;
-    std::vector<Meta> metas;
+    fs::path exeDir;
 
 public:
-    Generator(Object* root, std::vector<Meta> metas, CodeModel& codeModel);
-    void run();
+    Generator(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap, fs::path exeDir);
+    bool run();
 
 private:
     void genModel(Object* obj);
@@ -26,7 +29,7 @@ private:
     void genInit(Object* obj);
     void genEval(Object* obj);
     std::string getValueType(Object* obj);
-    std::string getPackage();
+    std::string getTemplate(Object* obj);
     std::string genEvalSignature(Object* obj, std::string param);
 };
 

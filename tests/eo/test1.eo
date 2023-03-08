@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test1
+  if.
+    eq. > @
+      4
+      2.plus 2
+    stdout "OK TEST1\n"
+    stdout "FAIL TEST1\n"

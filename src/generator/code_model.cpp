@@ -1,7 +1,8 @@
-#include "code_model.h"
 #include <iostream>
 #include <algorithm>
 #include <iterator>
+#include "code_model.h"
+#include "util.h"
 
 Call::Call(std::string name): name{name} {
 }
@@ -10,11 +11,35 @@ void Call::addArgument(std::string argument) {
     arguments.push_back(argument);
 }
 
-Function::Function(): varCounter(0) {
+Function::Function(): varCounter{0} {
 }
 
 void Function::addLine(std::string line) {
     body.push_back(line);
+}
+
+void Function::setType(FunctionType type, std::string varname) {
+    switch (type)
+    {
+    case CHILD:
+        body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
+        body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
+        body.push_back(genCall("stack_restore", {"pos"}));
+        body.push_back("return " + genCall("clone", {varname}));
+        break;
+    case DECORATOR:
+        body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
+        body.push_back(genCall("stack_restore", {"pos"}));
+        body.push_back("return " + genCall("clone", {varname}));
+        break;
+    case INNER:
+        body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
+        body.push_back("return " + varname);
+        break;
+    default:
+        break;
+    }
+    this->type = type;
 }
 
 std::string Function::getVar() {
@@ -36,7 +61,7 @@ std::string Function::getName() {
     return name;
 }
 
-CodeModel::CodeModel(std::unordered_map<std::string, int>& nameTagTable): nameTagTable{nameTagTable} {
+CodeModel::CodeModel(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap): unit{unit}, idTagTable{idTagTable}, importsMap{importsMap} {
 }
 
 CodeModel::~CodeModel() {
@@ -44,32 +69,34 @@ CodeModel::~CodeModel() {
     outSource.close();
 }
 
-bool CodeModel::open(std::filesystem::path path) {
-    if(!path.parent_path().empty()) {
-        std::filesystem::create_directories(path.parent_path());
-    }
-    path.replace_extension("h");
-    outHeader.open(path.string());
+bool CodeModel::open() {
+    fs::create_directories(unit.buildHeader.parent_path());
+    outHeader.open(unit.buildHeader.string());
     if(!outHeader.is_open()) {
-        std::cout << "error: File " << path.string() << " isn't accesible" << std::endl;
+        std::cout << "error: File " << unit.buildHeader.string() << " isn't accesible" << std::endl;
         return false;
     }
-    path.replace_extension("cpp");
-    outSource.open(path.string());
+    fs::create_directories(unit.buildCpp.parent_path());
+    outSource.open(unit.buildCpp.string());
     if(!outSource.is_open()) {
-        std::cout << "error: File " << path.string() << " isn't accesible" << std::endl;
+        std::cout << "error: File " << unit.buildCpp.string() << " isn't accesible" << std::endl;
         return false;
     }
-    path.replace_extension("");
-    name = path.filename().string();
+    sourceImports.insert("\"" + unit.buildHeader.filename().string() + "\"");
+    filename = unit.buildHeader.stem().filename().string();
     return true;
 }
 
-void CodeModel::addHeaderImport(Import import) {
-    headerImports.insert(import);
+void CodeModel::addImport(std::string alias) {
+    std::string import = importsMap.getImport(unit, alias);
+    if(import != "") {
+        sourceImports.insert("\"" + import + "\"");
+    } else {
+        std::cout << "File for alias " << alias << " not found\n";
+    }
 }
 
-void CodeModel::addSourceImport(Import import) {
+void CodeModel::addStdImport(std::string import) {
     sourceImports.insert(import);
 }
 
@@ -103,17 +130,19 @@ void CodeModel::addFunctionAtom(std::string path) {
     in.close();
 }
 
-std::string CodeModel::getName() {
-    return name;
-}
-
-void CodeModel::write() {
-    writeDefineBegin();
-    writeImports();
-    writeStructs();
-    writeOffset();
-    writeFunctions();
-    writeDefineEnd();
+bool CodeModel::write() {
+    try {
+        writeDefineBegin();
+        writeImports();
+        writeStructs();
+        writeOffset();
+        writeFunctions();
+        writeDefineEnd();
+    } catch(std::exception& e) {
+        std::cout << e.what() << "\n";
+        return false;
+    }
+    return true;
 }
 
 void CodeModel::writeDefineBegin() {
@@ -122,12 +151,9 @@ void CodeModel::writeDefineBegin() {
 }
 
 void CodeModel::writeImports() {
-    for(Import import : headerImports) {
-        outHeader << "#include " << import << "\n";
-    }
-    outHeader << "\n";
-    for(Import import : sourceImports) {
-        outSource << "#include " << import << "\n";
+    outHeader << "#include \"" << convertSeparator(importsMap.getObjectImport(unit)) << "\"\n\n";
+    for(std::string import : sourceImports) {
+        outSource << "#include " << convertSeparator(import) << "\n";
     }
     outSource << "\n";
 }
@@ -149,8 +175,8 @@ void CodeModel::writeOffset() {
         }
         outSource << "static const std::unordered_map<Tag, int> offset_" << s.name << " {\n";
         for(Field& f : s.fields) {
-            if(nameTagTable.count(f.name) == 1) {
-                outSource << "\t{" << getTag(f.name) << ", offsetof(" << s.name << ", " << f.name << ")},\n";
+            if(idTagTable.getTag(f.name) != "") {
+                outSource << "\t{" << idTagTable.getTag(f.name) << ", offsetof(" << s.name << ", " << f.name << ")},\n";
             }
         }
         outSource << "};\n\n";
@@ -159,13 +185,19 @@ void CodeModel::writeOffset() {
 
 void CodeModel::writeFunctions() {
     for(Function& f : functions) {
-        outHeader << f.signature << ";\n\n";
+        if(f.type != INNER) {
+            outHeader << f.signature << ";\n\n";
+        }
         outSource << f.signature << " {\n";
         if(!f.bodyAtom.empty()) {
             outSource << f.bodyAtom;
         } else {
             for(std::string line : f.body) {
-                outSource << "\t" << line << ";\n";
+                outSource << "\t" << line;
+                if(line.back() != '{' && line.back() != '}') {
+                    outSource << ";";
+                }
+                outSource << "\n";
             }
         }
         outSource << "}\n\n";
@@ -176,14 +208,36 @@ void CodeModel::writeDefineEnd() {
     outHeader << "#endif // " << getDefine() << "\n";
 }
 
-std::string CodeModel::getTag(std::string name) {
-    return std::to_string(nameTagTable[name]);
+IdTagTable& CodeModel::getIdTagTable() { 
+    return idTagTable;
+}
+
+ImportsMap& CodeModel::getImportsMap() {
+    return importsMap;
 }
 
 std::string CodeModel::getDefine() {
-    std::string define = name + "_H";
+    std::string define = filename + "_H";
     std::transform(define.begin(), define.end(), define.begin(), ::toupper);
     return define;
+}
+
+std::string CodeModel::getClassNameByValue(std::string value) {
+    value = "." + value;
+    std::string alias = "";
+    for(Meta& meta : unit.metas) {
+        if(meta.type == "alias" && meta.value.length() >= value.length() &&
+           0 == meta.value.compare(meta.value.length() - value.length(), value.length(), value)) {
+            alias = meta.value;
+            break;
+        }
+    }
+    std::string import = importsMap.getImport(unit, alias);
+    if(import == "") {
+        return "";
+    }
+    sourceImports.insert("\"" + import + "\"");
+    return importsMap.getClassName(alias);
 }
 
 std::string genVarName(int num) {

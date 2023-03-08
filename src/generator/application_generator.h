@@ -24,7 +24,7 @@ public:
 private:
     void genApplication(Object* obj);
     void genPart(Object* obj, std::string parentVar, bool isHead, bool isTemp);
-    void genMetaObject(Object* obj);
+    void genInnerApplication(Object* obj);
     void genVar(Object* obj, std::string parentVar, bool isTemp);
     void genRef(Object* obj, std::string parentVar, bool isTemp);
     void genData(Object* obj);

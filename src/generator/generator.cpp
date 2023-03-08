@@ -4,27 +4,16 @@
 #include "generator.h"
 #include "application_generator.h"
 
-bool gen(Object* root, std::vector<Meta> metas, std::filesystem::path path, std::unordered_map<std::string, int>& nameTagTable) {
-    if(!root) {
-        return false;
-    }
-    CodeModel model = CodeModel(nameTagTable);
-    if(!model.open(path)) {
-        return false;
-    }
-    Generator g(root, metas, model);
-    g.run();
-    return true;
+Generator::Generator(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap, fs::path exeDir):
+    unit{unit}, codeModel{unit, idTagTable, importsMap}, exeDir{exeDir} {
 }
 
-Generator::Generator(Object* root, std::vector<Meta> metas, CodeModel& codeModel): root{root}, metas{metas}, codeModel{codeModel} {
-}
-
-void Generator::run() {
-    codeModel.addHeaderImport("\"object.h\"");
-    codeModel.addSourceImport("\"" + codeModel.getName() + ".h\"");
-    genModel(root);
-    codeModel.write();
+bool Generator::run() {
+    if(!codeModel.open()) {
+        return false;
+    }
+    genModel(unit.root);
+    return codeModel.write();
 }
 
 void Generator::genModel(Object* obj) {
@@ -40,7 +29,7 @@ void Generator::genModel(Object* obj) {
 
 void Generator::genStruct(Object* obj) {
     Struct s;
-    s.name = obj->getFullName();
+    s.name = obj->getClassName();
     s.fields.push_back({"EO_head", "head"});
     for(Attribute& a : obj->getAttributes()) {
         s.fields.push_back({"int", a.name});
@@ -50,9 +39,9 @@ void Generator::genStruct(Object* obj) {
     }
     for(Object* child : obj->getChildren()) {
         if(child->getType() == CLASS_TYPE) {
-            s.fields.push_back({child->getFullName(), child->getName()});
+            s.fields.push_back({child->getClassName(), child->getValue()});
         } else if(child->getType() == APPLICATION_TYPE && !child->isDecorator()) {
-            s.fields.push_back({"EO_object", child->getName()});
+            s.fields.push_back({"EO_object", child->getValue()});
         }
     }
     codeModel.addStruct(s);
@@ -61,48 +50,45 @@ void Generator::genStruct(Object* obj) {
 void Generator::genInit(Object* obj) {
     Function f;
     std::vector<std::string> signatureArgs = {
-        obj->getFullName() + "* obj",
+        obj->getClassName() + "* obj",
         "int parent_offset"
     };
     if(!getValueType(obj).empty()) {
         signatureArgs.push_back(getValueType(obj) + " value");
     }
-    f.signature = genCall("void init_" + obj->getFullName(), signatureArgs);
+    f.signature = genCall("void init_" + obj->getClassName(), signatureArgs);
     std::vector<Attribute> attributes = obj->getAttributes();
     int varargs = -1;
     if(!attributes.empty() && attributes.back().isVararg) {
         varargs = attributes.size() - 1;
     }
-    std::string offset_var = "&offset_" + obj->getFullName();
+    std::string offset_var = "&offset_" + obj->getClassName();
     if(attributes.empty() && obj->getChildren().empty()) {
         offset_var = "&offset_default";
     }
     f.addLine(genCall("init_head", {
         "(EO_object*)obj",
-        "eval_" + obj->getFullName(),
+        "eval_" + obj->getClassName(),
         "parent_offset",
         std::to_string(varargs),
-        genCall("sizeof", {obj->getFullName()}),
+        genCall("sizeof", {obj->getClassName()}),
         offset_var,
     }));
     for(Object* child : obj->getChildren()) {
         if(child->getType() == CLASS_TYPE) {
-            f.addLine(genCall("init_" + child->getFullName(), {
-                "&obj->" + child->getName(),
-                genCall("offsetof", {obj->getFullName(), child->getName()})
+            f.addLine(genCall("init_" + child->getClassName(), {
+                "&obj->" + child->getValue(),
+                genCall("offsetof", {obj->getClassName(), child->getValue()})
             }));
         } else if(child->getType() == APPLICATION_TYPE && !child->isDecorator()) {
             ApplicationGenerator appGen(child, codeModel, genEvalSignature(child, "obj_"));
-            appGen.getFunction().addLine("EO_object* obj = " + genCall("get_parent", {"obj_"}));
-            appGen.getFunction().addLine("StackPos pos = " + genCall("stack_store"));
             appGen.run();
-            appGen.getFunction().addLine(genCall("stack_restore", {"pos"}));
-            appGen.getFunction().addLine("return " + genCall("clone", {appGen.getResultVar()}));
+            appGen.getFunction().setType(CHILD, appGen.getResultVar());
             codeModel.addFunction(appGen.getFunction());
             f.addLine(genCall("init_head", {
-                "&obj->" + child->getName(),
+                "&obj->" + child->getValue(),
                 appGen.getFunction().getName(),
-                genCall("offsetof", {obj->getFullName(), child->getName()}),
+                genCall("offsetof", {obj->getClassName(), child->getValue()}),
                 "-1",
                 "sizeof(EO_object)",
                 "&offset_default"
@@ -115,7 +101,7 @@ void Generator::genInit(Object* obj) {
     if(!getValueType(obj).empty()) {
         f.addLine("obj->value = value");
     }
-    if(obj->getFullName() == "bytes") {
+    if(obj->getClassName() == "bytes" || obj->getClassName() == "EO_string") {
         f.addLine("obj->head.size += obj->value.length");
     }
     codeModel.addFunction(f);
@@ -123,7 +109,7 @@ void Generator::genInit(Object* obj) {
 
 void Generator::genEval(Object* obj) {
     if(obj->isAtom()) {
-        codeModel.addFunctionAtom("templates/" + getPackage() + "/" + obj->getFullName() + ".cpp");
+        codeModel.addFunctionAtom(getTemplate(obj));
         return;
     }
     std::vector<Object*> children = obj->getChildren();
@@ -134,43 +120,41 @@ void Generator::genEval(Object* obj) {
         f.addLine("return obj");
     } else {
         ApplicationGenerator appGen(*it, codeModel, genEvalSignature(obj, "obj"));
-        appGen.getFunction().addLine("StackPos pos = " + genCall("stack_store"));
         appGen.run();
         f = appGen.getFunction();
-        f.addLine(genCall("stack_restore", {"pos"}));
-        f.addLine("return " + genCall("clone", {appGen.getResultVar()}));
+        f.setType(DECORATOR, appGen.getResultVar());
     }
     codeModel.addFunction(f);
 }
 
 std::string Generator::getValueType(Object* obj) {
-    if(obj->getName() == "EO_bool") {
+    if(obj->getOriginValue() == "bool") {
         return "bool";
-    } else if(obj->getName() == "EO_int") {
+    } else if(obj->getOriginValue() == "int") {
         return "long long";
-    } else if(obj->getName() == "EO_float") {
+    } else if(obj->getOriginValue() == "float") {
         return "double";
-    } else if(obj->getName() == "EO_string") {
-        return "std::string";
-    } else if(obj->getName() == "bytes") {
+    } else if(obj->getOriginValue() == "string") {
+        return "string_value";
+    } else if(obj->getOriginValue() == "bytes") {
         return "bytes_value";
-    } else if(obj->getName() == "EO_array") {
+    } else if(obj->getOriginValue() == "array") {
         return "int";
     }
     return "";
 }
 
-std::string Generator::getPackage() {
-    for(Meta& m : metas) {
+std::string Generator::getTemplate(Object* obj) {
+    for(Meta& m : unit.metas) {
         if(m.type == "package") {
             std::string package = m.value;
             std::replace(package.begin(), package.end(), '.', '/');
-            return package;
+            return (exeDir / fs::path("templates") / fs::path(package) / fs::path(obj->getClassName() + ".cpp")).string();
         }
     }
     return "";
 }
 
 std::string Generator::genEvalSignature(Object* obj, std::string param) {
-    return genCall("EO_object* eval_" + obj->getFullName(), {"EO_object* " + param});
+    return genCall("EO_object* eval_" + obj->getClassName(), {"EO_object* " + param});
 }

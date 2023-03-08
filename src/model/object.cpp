@@ -8,6 +8,7 @@ Object::Object(Object* parent, objectType type) {
     this->atom = false;
     this->clone = false;
     this->vararg = false;
+    this->dot = false;
 }
 
 Object::~Object() {
@@ -48,13 +49,13 @@ void Object::clearChildren() {
     children.clear();
 }
 
-void Object::setName(std::string name) {
-    this->name = name;
+void Object::setValue(std::string value) {
+    this->value = value;
 }
 
-void Object::setValue(std::string value) {
+void Object::setOriginValue(std::string value) {
     int l = value.length();
-    if(type == VAR_TYPE) {
+    if(type == VAR_TYPE || type == REF_TYPE) {
         if(l > 0 && value[l-1] == '\'') {
             this->clone = true;
             value = value.substr(0, l-1);
@@ -63,7 +64,12 @@ void Object::setValue(std::string value) {
             this->vararg = true;
             value = value.substr(3);
         }
+        if(l > 0 && value[l-1] == '.') {
+            this->dot = true;
+            value = value.substr(0, l-1);
+        }
     }
+    this->originValue = value;
     this->value = value;
 }
 
@@ -93,20 +99,10 @@ void Object::setAttributes(std::vector<Attribute> attributes) {
     this->attributes = attributes;
 }
 
-void Object::updateInverseNotaion() {
-/*    if(children.size() >= 2 && (children[0]->type == VAR_TYPE || children[0]->type == REF_TYPE) && endsWithDot(children[0]->getValue())) {
-        children[1]->children.push_back(children[0]);
-        if(children[1]->getApplicationAttributes().empty()) {
-            children[1]->setType(SEQUENCE_TYPE);
-        }
-        children.erase(children.begin());
-    }*/
-}
-
 void Object::addToSequence(objectType type, std::string value) {
     if(this->type != SEQUENCE_TYPE) {
         Object* child = new Object(this, this->type);
-        child->setValue(this->value);
+        child->setOriginValue(this->originValue);
         child->setChildren(this->children);
         this->type = SEQUENCE_TYPE;
         this->value = "";
@@ -114,7 +110,7 @@ void Object::addToSequence(objectType type, std::string value) {
         this->children.push_back(child);
     }
     Object* child = makeChild(type);
-    child->setValue(value);
+    child->setOriginValue(value);
 }
 
 bool Object::validate() {
@@ -138,30 +134,35 @@ bool Object::isVararg() {
     return vararg;
 }
 
+bool Object::isDot() {
+    return dot;
+}
+
 bool Object::isDecorator() {
-    return type == APPLICATION_TYPE && name == "@";
+    return type == APPLICATION_TYPE && originValue == "@";
 }
 
-std::string Object::getName() {
-    return name;
-}
-
-std::string Object::getFullName() {
-    if(!fullName.empty()) return fullName;
-    if(name.empty()) return "";
-    fullName = name;
+std::string Object::getClassName() {
+    if(value.empty()) {
+        return "";
+    }
+    std::string className = value;
     Object* obj = parent;
     while(obj != nullptr) {
-        if(!obj->name.empty() && obj->type == CLASS_TYPE) {
-            fullName = obj->name + "_" + fullName;
+        if(!obj->value.empty() && obj->type == CLASS_TYPE) {
+            className = obj->value + "_" + className;
         }
         obj = obj->parent;
     }
-    return fullName;
+    return className;
 }
 
 std::string Object::getValue() {
     return value;
+}
+
+std::string Object::getOriginValue() {
+    return originValue;
 }
 
 objectType Object::getType() {
@@ -233,12 +234,12 @@ std::pair<bool, std::unordered_set<std::string>> Object::checkDuplicateNames() {
         names.insert(a.name);
     }
     for(Object* child : children) {
-        if(child->name != "") {
-            if(names.count(child->name)) {
-                std::cout << "error: object with name " << child->name << " already defined\n";
+        if(child->value != "" && (child->type == CLASS_TYPE || child->type == APPLICATION_TYPE)) {
+            if(names.count(child->value)) {
+                std::cout << "error: object with name " << child->value << " already defined\n";
                 return make_pair(false, names);
             }
-            names.insert(child->name);
+            names.insert(child->value);
         }
     }
     return make_pair(true, names);
@@ -250,7 +251,6 @@ void Object::printDebug() {
 
 void Object::printDebug(int s) {
     std::cout << std::string(s, ' ');
-    if(!name.empty()) std::cout << "name=" << name << " ";
     if(type) std::cout << "type=" << objectTypeNames[type] << " ";
     if(!value.empty()) std::cout << "value=" << value << " ";
     for(int i = 0; i < attributes.size(); ++i) {

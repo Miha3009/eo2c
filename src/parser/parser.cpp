@@ -1,22 +1,7 @@
 #include <iostream>
 #include "parser.h"
 
-bool parse(const char* str, std::string path, Object* root, std::vector<Meta>& metas) {
-    Parser p(str, path, root, metas);
-    bool result = p.isProgram();
-#ifdef DEBUG
-    if(result) {
-        std::cout << "OK " << path << std::endl;
-    } else {
-        std::cout << "FAIL " << path << std::endl;
-    }
-#endif
-    return result;
-}
-
-Parser::Parser(const char* str, std::string path, Object* root, std::vector<Meta>& metas): str{str}, path{path},
-    pos{0}, line{1}, column{1}, root{root}, metas{metas}
-{
+Parser::Parser(TranslationUnit& unit, const char* str): unit{unit}, str{str}, pos{0}, line{1}, column{1} {
     int p = 0;
     spaces = {0, 0};
     while(str[p] != '\0') {
@@ -128,13 +113,13 @@ _end:
 #ifdef DEBUG
     debugMessage("This is meta");
 #endif
-    metas.push_back({type, lexValue});
+    unit.metas.push_back({type, lexValue});
     return true;
 }
 
 // objects ::= object {EOL [object]}
 bool Parser::isObjects() {
-    curObj = root;
+    curObj = unit.root;
     if(isObject()) {
         goto _1;
     }
@@ -155,7 +140,7 @@ _2:
         goto _end;
     }
 _3:
-    curObj = root;
+    curObj = unit.root;
     if(isObject()) {
         goto _1;
     }
@@ -232,7 +217,6 @@ _1:
     return false;
 _2:
     if(isObject()) {
-        curObj->updateInverseNotaion();
         goto _4;
     }
     return errorMessage("object expected");
@@ -418,13 +402,13 @@ bool Parser::isSuffix() {
 _1:
     if(isAttribute()) {
         if(curObj->getType() == CLASS_TYPE) {
-            curObj->setName(lexValue);
+            curObj->setOriginValue(lexValue);
         } else {
             Object* tmpObj = curObj;
             while(tmpObj->getParent()->getType() != CLASS_TYPE) {
                 tmpObj = tmpObj->getParent();
             }
-            tmpObj->setName(lexValue);
+            tmpObj->setOriginValue(lexValue);
         }
         goto _2;
     }
@@ -471,7 +455,7 @@ bool Parser::isApplication(bool parseHtail) {
     }
     if(isHead()) {
         curObj->setType(dataType);
-        curObj->setValue(lexValue);
+        curObj->setOriginValue(lexValue);
         goto _1;
     }
     if(isScope()) {
@@ -693,7 +677,7 @@ bool Parser::isBytes() {
     storeLocation(l);
     if(str[pos] == '-' && str[pos+1] == '-') {
         Object* tmpObj = curObj->makeChild(BYTE_TYPE);
-        tmpObj->setValue("00");
+        tmpObj->setOriginValue("00");
         next(2);
         goto _end;
     }
@@ -704,7 +688,7 @@ bool Parser::isBytes() {
 _1:
     if(isSymbol('-')) {
         Object* tmpObj = curObj->makeChild(BYTE_TYPE);
-        tmpObj->setValue(lexValue);
+        tmpObj->setOriginValue(lexValue);
         next(1);
         goto _2;
     }
@@ -718,7 +702,7 @@ _2:
 _3:
     if(isSymbol('-')) {
         Object* tmpObj = curObj->makeChild(BYTE_TYPE);
-        tmpObj->setValue(lexValue);
+        tmpObj->setOriginValue(lexValue);
         next(1);
         goto _2;
     }
@@ -1184,7 +1168,7 @@ void Parser::debugMessage(std::string&& messageText) {
 }
 
 void Parser::printMessage(std::string&& messageText, std::string&& messageType) {
-    std::cout << path << ":"
+    std::cout << unit.source.string() << ":"
               << line << ":"
               << column << ": " << messageType << ": "
               << messageText << "\n";
