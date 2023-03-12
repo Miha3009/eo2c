@@ -28,6 +28,7 @@ private:
     void genVar(Object* obj, std::string parentVar, bool isTemp);
     void genRef(Object* obj, std::string parentVar, bool isTemp);
     void genData(Object* obj);
+    void genClass(Object* obj);
     void genSequenceHead(Object* obj, bool isHead);
     void genSequenceTail(Object* obj, bool isHead);
     void genAttributesLength(Object* obj);

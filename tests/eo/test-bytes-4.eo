@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-bytes-4
+  if. > @
+    eq.
+      300
+      00-00-00-00-00-00-01-2C-.as-int
+    stdout "OK TEST BYTES 4\n"
+    stdout "FAIL TEST BYTES 4\n"

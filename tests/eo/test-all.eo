@@ -1,0 +1,17 @@
++package test
++alias org.eolang.seq
++alias test.test-int
++alias test.test-bool
++alias test.test-bytes
++alias test.test-float
++alias test.test-array
++alias test.test-string
+
+[] > test-all
+  seq > @
+    test-int
+    test-bool
+    test-bytes
+    test-float
+    test-array
+    test-string

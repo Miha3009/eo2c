@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-bytes-9
+  if. > @
+    eq.
+      CD-
+      32-.not
+    stdout "OK TEST BYTES 9\n"
+    stdout "FAIL TEST BYTES 9\n"

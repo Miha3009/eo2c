@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-int-8
+  if. > @
+    lt.
+      6
+      7
+    stdout "OK TEST INT 8\n"
+    stdout "FAIL TEST INT 8\n"

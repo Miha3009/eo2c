@@ -58,6 +58,5 @@ void CmakeGenerator::writeSetSources() {
 }
 
 void CmakeGenerator::writeTail() {
-    out << "set(CMAKE_INSTALL_MESSAGE NEVER)\n\n";
     out << "add_executable(eolang ${SOURCES})\n";
 }

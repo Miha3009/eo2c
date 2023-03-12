@@ -1,13 +1,16 @@
 #include "object.h"
 #include "org/eolang/int.h"
+#include "org/eolang/float.h"
 #include "org/eolang/string.h"
 #include "org/eolang/array.h"
+#include "org/eolang/bytes.h"
 
 Stack stack;
 int obj_count = 0;
 
-EO_object* get_parent(EO_object* obj) {
-  return (EO_object*)((StackPos)obj - obj->head.parent_offset);
+EO_object* evaluate(EO_object* obj) {
+//  std::cout << "EVAL " << (char*)obj - stack.data << " " << obj->head.id << std::endl;
+  return obj->head.eval(obj);
 }
 
 EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
@@ -24,7 +27,7 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
       result_it = offset_table->find(tag);
     }
     if(result_it == offset_table->end()) {
-      std::cout << "ERROR TAG " << tag << " NOT FOUND\n";
+      wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
       exit(0);
     }
   }
@@ -50,16 +53,19 @@ EO_object* ensure_sub(EO_object* obj, Tag tag) {
     offset_table = (const std::unordered_map<Tag, int>*)obj->head.ref;
     result_it = offset_table->find(tag);
     if(result_it == offset_table->end()) {
-      std::cout << "ERROR TAG " << tag << " NOT FOUND\n";
+      wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
       exit(0);
     }
   }
   return obj;
 }
 
-EO_object* evaluate(EO_object* obj) {
-//  std::cout << "EVAL " << (char*)obj - stack.data << " " << obj->head.id << std::endl;
-  return obj->head.eval(obj);
+EO_object* get_parent(EO_object* obj) {
+  return (EO_object*)((StackPos)obj - obj->head.parent_offset);
+}
+
+EO_object* get_home(EO_object* obj) {
+  return obj->head.home;
 }
 
 void init_head(EO_object* obj,
@@ -71,6 +77,7 @@ void init_head(EO_object* obj,
   obj->head.id = obj_count++;
   obj->head.eval = eval;
   obj->head.parent_offset = parent_offset;
+  obj->head.home = get_parent(obj);
   obj->head.attr_count = 0;
   obj->head.varargs_pos = varargs_pos;
   obj->head.size = size;
@@ -125,27 +132,31 @@ EO_object* move_object(EO_object* obj) {
   if(obj_clone == obj) {
     return obj;
   }
-  if((StackPos)obj + obj->head.size > (StackPos)obj_clone) {
-    std::memmove(obj_clone, obj, obj->head.size);
-  } else {
-    std::memcpy(obj_clone, obj, obj->head.size);
-  }
+  std::memmove(obj_clone, obj, obj->head.size);
   if(obj_clone->head.parent_offset != 0) {
     obj_clone->head.parent_offset += calc_offset(obj, obj_clone);
   }
   return obj_clone;
 }
 
-string_value make_string(const char* str) {
+unsigned char* get_bytes_data(EO_object* obj) {
+  return (unsigned char*)((StackPos)obj + sizeof(bytes));
+}
+
+string_value make_string(const wchar_t* str) {
   string_value result;
   int i = 0;
-  while(str[i] != '\0') ++i;
+  while(str[i] != L'\0') ++i;
   result.length = i + 1;
-  result.data = (char*)stack_alloc(sizeof(char) * result.length);
+  wchar_t* data = (wchar_t*)stack_alloc(sizeof(wchar_t) * result.length);
   for(int i = 0; i < result.length; ++i) {
-    result.data[i] = str[i];
+    data[i] = str[i];
   }
   return result;
+}
+
+wchar_t* get_string_data(EO_object* obj) {
+  return (wchar_t*)((StackPos)obj + sizeof(EO_string));
 }
 
 EO_object* make_meta_object(EO_object* parent, EO_object* (*eval)(EO_object*)) {
@@ -171,7 +182,11 @@ int get_array_length(EO_object* obj) {
 }
 
 bool is_int(char* str) {
-  for(int i = 0; str[i] != '\0'; ++i) {
+  int i = 0;
+  if(str[0] == '-') {
+    ++i;
+  }
+  for(; str[i] != '\0'; ++i) {
     if(str[i] < '0' || str[i] > '9') {
       return false;
     }
@@ -179,17 +194,25 @@ bool is_int(char* str) {
   return true;
 }
 
-bool is_string(char* str) {
-  if(str[0] != '"') {
-    return false;
-  }
+bool is_float(char* str) {
   int i = 0;
-  for(; str[i] != '\0'; ++i);
-  if(i == 0 || str[i-1] != '"') {
-    return false;
+  if(str[0] == '-') {
+    ++i;
   }
-  str[i-1] = '\0';
-  return true;
+  bool dot = false;
+  for(; str[i] != '\0'; ++i) {
+    if(str[i] == '.') {
+      if(dot) {
+        return false;
+      }
+      dot = true;
+      continue;
+    }
+    if(str[i] < '0' || str[i] > '9') {
+      return false;
+    }
+  }
+  return dot;
 }
 
 EO_object* make_object_from_arg(char* arg) {
@@ -197,11 +220,18 @@ EO_object* make_object_from_arg(char* arg) {
     EO_object* obj = stack_alloc(sizeof(EO_int));
     init_EO_int((EO_int*)obj, 0, std::atoll(arg));
     return obj;
-  } else if(is_string(arg)) {
+  } else if(is_float(arg)) {
+    EO_object* obj = stack_alloc(sizeof(EO_float));
+    init_EO_float((EO_float*)obj, 0, std::atof(arg));
+    return obj;
+  } else {
     EO_object* obj = stack_alloc(sizeof(EO_string));
-    init_EO_string((EO_string*)obj, 0, make_string(arg + 1));
+    const size_t len = strlen(arg) + 1;
+    wchar_t* warg = new wchar_t[len];
+    mbstowcs(warg, arg, len);
+    init_EO_string((EO_string*)obj, 0, make_string(warg));
+    delete warg;
     return obj;
   }
-  std::cout << "A suitable type for the argument " << arg << " was not found\n";
   return nullptr;
 }

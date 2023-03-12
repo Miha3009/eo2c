@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-string-3
+  if. > @
+    eq.
+      "рив"
+      "Привет".slice 1 3
+    stdout "OK TEST STRING 3\n"
+    stdout "FAIL TEST STRING 3\n"

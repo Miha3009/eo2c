@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-bool-3
+  if.
+    eq. > @
+      FALSE
+      TRUE.and FALSE
+    stdout "OK TEST BOOL 3\n"
+    stdout "FAIL TEST BOOL 3\n"

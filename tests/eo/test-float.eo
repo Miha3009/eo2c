@@ -1,0 +1,25 @@
++package test
++alias org.eolang.seq
++alias test.test-float-1
++alias test.test-float-2
++alias test.test-float-3
++alias test.test-float-4
++alias test.test-float-5
++alias test.test-float-6
++alias test.test-float-7
++alias test.test-float-8
++alias test.test-float-9
++alias test.test-float-10
+
+[] > test-float
+  seq > @
+    test-float-1
+    test-float-2
+    test-float-3
+    test-float-4
+    test-float-5
+    test-float-6
+    test-float-7
+    test-float-8
+    test-float-9
+    test-float-10

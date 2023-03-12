@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "ratio": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "string_view": "cpp",
+        "regex": "cpp",
+        "string": "cpp",
+        "*.tcc": "cpp",
+        "optional": "cpp",
+        "system_error": "cpp",
+        "new": "cpp",
+        "bitset": "cpp",
+        "initializer_list": "cpp",
+        "concepts": "cpp",
+        "iterator": "cpp"
+    }
+}

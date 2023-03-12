@@ -2,6 +2,8 @@
 #include <algorithm>
 #include "object.h"
 
+static int anonymousClassCount = 0;
+
 Object::Object(Object* parent, objectType type) {
     this->type = type;
     this->parent = parent;
@@ -139,17 +141,20 @@ bool Object::isDot() {
 }
 
 bool Object::isDecorator() {
-    return type == APPLICATION_TYPE && originValue == "@";
+    return originValue == "@";
 }
 
 std::string Object::getClassName() {
     if(value.empty()) {
-        return "";
+        value = std::to_string(anonymousClassCount++);
     }
     std::string className = value;
     Object* obj = parent;
     while(obj != nullptr) {
-        if(!obj->value.empty() && obj->type == CLASS_TYPE) {
+        if(obj->type == CLASS_TYPE) {
+            if(obj->value.empty()) {
+                value = std::to_string(anonymousClassCount++);
+            }
             className = obj->value + "_" + className;
         }
         obj = obj->parent;

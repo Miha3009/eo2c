@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-array-1
+  if. > @
+    eq.
+      3
+      (* 1 2 3).length
+    stdout "OK TEST ARRAY 1\n"
+    stdout "FAIL TEST ARRAY 1\n"

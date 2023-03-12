@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-bytes-3
+  if. > @
+    eq.
+      23-45-
+      01-23-45-67-.slice 1 2
+    stdout "OK TEST BYTES 3\n"
+    stdout "FAIL TEST BYTES 3\n"

@@ -28,43 +28,43 @@
 
 [] > bool
   # Equal to another object?
-  #[x] > eq
-  #  eq. > @
-  #    ^.as-bytes
-  #    x.as-bytes
-  #
+  [x] > eq
+    eq. > @
+      ^.as-bytes
+      x.as-bytes
+
   # If true, return "t", otherwise "f"
   [t f] > if /t
 
   # NOT
-  #[] > not
-  #  eq. > @
-  #    ^
-  #    FALSE
-  #
+  [] > not
+    eq. > @
+      ^
+      FALSE
+
   # AND
-  #[x...] > and /bool
-  #
+  [x...] > and /bool
+
   # OR
-  #[x...] > or /bool
-  #
+  [x...] > or /bool
+
   # While this is true copies the object
   # with "i" as the position of the cycle. The result
   # of WHILE is the last dataized object or FALSE if
   # ^ condition was never TRUE. The \rho of the object
   # copied will be set to "while.\rho".
-  #[f] > while /int
+  #TODO[f] > while /int
   #
   # Converts this to bytes
-  #[] > as-bytes
-  #  if. > @
-  #    ^
-  #    01-
-  #    00-
-  #
+  [] > as-bytes
+    if. > @
+      ^
+      01-
+      00-
+
   # Converts this to hash
-  #[] > as-hash
-  #  if. > @
-  #    ^
-  #    1231
-  #    1237
+  [] > as-hash
+    if. > @
+      ^
+      1231
+      1237

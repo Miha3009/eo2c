@@ -1,0 +1,31 @@
++package test
++alias org.eolang.seq
++alias test.test-bytes-1
++alias test.test-bytes-2
++alias test.test-bytes-3
++alias test.test-bytes-4
++alias test.test-bytes-5
++alias test.test-bytes-6
++alias test.test-bytes-7
++alias test.test-bytes-8
++alias test.test-bytes-9
++alias test.test-bytes-10
++alias test.test-bytes-11
++alias test.test-bytes-12
++alias test.test-bytes-13
+
+[] > test-bytes
+  seq > @
+    test-bytes-1
+    test-bytes-2
+    test-bytes-3
+    test-bytes-4
+    test-bytes-5
+    test-bytes-6
+    test-bytes-7
+    test-bytes-8
+    test-bytes-9
+    test-bytes-10
+    test-bytes-11
+    test-bytes-12
+    test-bytes-13

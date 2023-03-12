@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-array-3
+  if. > @
+    eq.
+      7
+      ((* 8 5 9).with 7).at 3
+    stdout "OK TEST ARRAY 3\n"
+    stdout "FAIL TEST ARRAY 3\n"

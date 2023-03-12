@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-int-9
+  if. > @
+    lte.
+      6
+      6
+    stdout "OK TEST INT 9\n"
+    stdout "FAIL TEST INT 9\n"

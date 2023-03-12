@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-string-1
+  if. > @
+    eq.
+      "Привет"
+      "Привет".as-bytes.as-string
+    stdout "OK TEST STRING 1\n"
+    stdout "FAIL TEST STRING 1\n"

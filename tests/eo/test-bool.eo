@@ -1,0 +1,13 @@
++package test
++alias org.eolang.seq
++alias test.test-bool-1
++alias test.test-bool-2
++alias test.test-bool-3
++alias test.test-bool-4
+
+[] > test-bool
+  seq > @
+    test-bool-1
+    test-bool-2
+    test-bool-3
+    test-bool-4

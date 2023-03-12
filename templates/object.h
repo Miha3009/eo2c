@@ -18,6 +18,7 @@ struct EO_head {
   int id;
   EO_object* (*eval)(EO_object*);
   int parent_offset;
+  EO_object* home;
   int attr_count;
   int varargs_pos;
   size_t size;
@@ -28,13 +29,15 @@ struct EO_object {
   EO_head  head;
 };
 
-EO_object* get_parent(EO_object* obj);
+EO_object* evaluate(EO_object* obj);
 
 EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy);
 
 EO_object* ensure_sub(EO_object* obj, Tag tag);
 
-EO_object* evaluate(EO_object* obj);
+EO_object* get_parent(EO_object* obj);
+
+EO_object* get_home(EO_object* obj);
 
 void init_head(EO_object* obj,
                EO_object* (*eval)(EO_object*),
@@ -86,9 +89,10 @@ void add_attribute_to_array(EO_object* obj, EO_object* attr);
 
 EO_object* clone(EO_object* obj);
 
+EO_object* move_object(EO_object* obj);
+
 struct bytes_value {
   int length;
-  unsigned char* data;
 };
 
 template <typename... Bytes>
@@ -96,19 +100,22 @@ bytes_value make_bytes(Bytes... bytes) {
   unsigned char bytes_[sizeof...(bytes)] = {bytes...};
   bytes_value result;
   result.length = sizeof...(Bytes);
-  result.data = (unsigned char*)stack_alloc(sizeof...(bytes));
+  unsigned char* data = (unsigned char*)stack_alloc(sizeof...(bytes));
   for(int i = 0; i < sizeof...(bytes); ++i) {
-    result.data[i] = bytes_[i];
+    data[i] = bytes_[i];
   }
   return result;
 }
 
+unsigned char* get_bytes_data(EO_object* obj);
+
 struct string_value {
   int length;
-  char* data;
 };
 
-string_value make_string(const char* str);
+string_value make_string(const wchar_t* str);
+
+wchar_t* get_string_data(EO_object* obj);
 
 EO_object* make_meta_object(EO_object* parent, EO_object* (*eval)(EO_object*));
 

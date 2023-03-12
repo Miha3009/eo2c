@@ -1,17 +1,24 @@
 EO_object* eval_bytes_EO_and(EO_object* obj) {
+	StackPos pos = stack_store();
+    EO_object* arr = evaluate(apply_offset(obj, ((bytes_EO_and*)obj)->b));
+    int arr_len = get_array_length(arr);
+    EO_object* operands[arr_len];
+    for(int i = 0; i < arr_len; ++i) {
+        operands[i] = evaluate(array_at(arr, i));
+    }
+    int length = ((bytes*)get_parent(obj))->value.length;
     EO_object* result = stack_alloc(sizeof(bytes));
-    bytes_value value = ((bytes*)get_parent(obj))->value;
     bytes_value new_value;
-    new_value.length = value.length;
-    new_value.data = (unsigned char*)stack_alloc(value.length);
-    std::memcpy(new_value.data, value.data, value.length);
-    bytes_EO_and* obj_ = (bytes_EO_and*)obj;
-    for(int i = 0; i < obj_->b_length; ++i) {
-        bytes* operand = (bytes*)(*(obj_->b + i));
-        for(int j = 0; j < value.length; ++j) {
-            new_value.data[j] &= operand->value.data[j];
+    new_value.length = length;
+    unsigned char* new_data = (unsigned char*)stack_alloc(length);
+    std::memcpy(new_data, get_bytes_data(get_parent(obj)), length);
+    for(int i = 0; i < arr_len; ++i) {
+        unsigned char* operand_data = get_bytes_data(operands[i]);
+        for(int j = 0; j < length; ++j) {
+            new_data[j] &= operand_data[j];
         }
     }
     init_bytes((bytes*)result, 0, new_value);
-    return result;
+	stack_restore(pos);
+    return move_object(result);
 }

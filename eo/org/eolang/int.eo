@@ -36,36 +36,36 @@
       x.as-bytes
 
   # Tests that $ < x
-  #[x] > lt
-  #  gt. > @
-  #    plus.
-  #      x
-  #      neg.
-  #        ^
-  #    0
-  #
+  [x] > lt
+    gt. > @
+      plus.
+        x
+        neg.
+          ^
+      0
+
   # Tests that $ ≤ x
-  #[x] > lte
-  #  not. > @
-  #    ^.gt x
-  #
+  [x] > lte
+    not. > @
+      ^.gt x
+
   # Tests that $ > x
-  #[x] > gt /bool
-  #
+  [x] > gt /bool
+
   # Tests that $ ≥ x
-  #[x] > gte
-  #  not. > @
-  #    ^.lt x
-  #
+  [x] > gte
+    not. > @
+      ^.lt x
+
   # Change the sign of the number
-  #[] > neg
-  #  ^.times -1 > @
-  #
+  [] > neg
+    ^.times -1 > @
+
   # Add to the current one
   [x...] > plus /int
 
   # Subtract from the current one
-  #[x...] > minus
+  #TODO[x...] > minus
   #  mapped. > x-neg
   #    list
   #      x
@@ -76,19 +76,19 @@
   #    ...x-neg
   #
   # Multiplication this one by another int
-  #[x...] > times /int
-  #
+  [x...] > times /int
+
   # Divide this one by another int
-  #[x...] > div /int
-  #
+  [x...] > div /int
+
   # Converts this to bytes
   [] > as-bytes /bytes
   
   # Converts this to hash
-  #[] > as-hash
-  #  as-int. > @
-  #    xor.
-  #      as-bytes
-  #      right.
-  #        as-bytes
-  #        32
+  [] > as-hash
+    as-int. > @
+      xor.
+        as-bytes
+        right.
+          as-bytes
+          32

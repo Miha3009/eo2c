@@ -27,6 +27,7 @@ void ApplicationGenerator::run() {
     genApplication(root);
     clearEvaluate();
     resultVar = variableNames[root];
+    f.addLine(resultVar + " = " + genCall("evaluate", {resultVar}));
 }
 
 void ApplicationGenerator::genApplication(Object* obj) {
@@ -39,8 +40,8 @@ void ApplicationGenerator::genApplication(Object* obj) {
     }
     genPart(head, "obj", true, false);
     variableNames[obj] = variableNames[head];
+    std::string headVar = variableNames[head];
     if(!obj->getApplicationAttributes().empty()) {
-        std::string headVar = variableNames[head];
         varsWithAttributes.insert(headVar);
         genAttributesLength(obj);
         for(Object* a : obj->getApplicationAttributes()) {
@@ -54,7 +55,6 @@ void ApplicationGenerator::genApplication(Object* obj) {
             }
         }
         f.addLine(genCall("update_size", {headVar}));
-        f.addLine(headVar + " = " + genCall("evaluate", {headVar}));
     }
 }
 
@@ -75,6 +75,8 @@ void ApplicationGenerator::genPart(Object* obj, std::string parentVar, bool isHe
         genVar(obj, parentVar, isTemp);
     } else if(obj->getType() == REF_TYPE) {
         genRef(obj, parentVar, isTemp);
+    } else if(obj->getType() == CLASS_TYPE) {
+        genClass(obj);
     } else {
         genData(obj);
     }
@@ -150,6 +152,14 @@ void ApplicationGenerator::genRef(Object* obj, std::string parentVar, bool isTem
         } else {
             f.addLine(f.nextVarDeclaration() + genCall("clone", {genCall("get_parent", {parentVar})}));
         }
+    } else if(obj->getValue() == "$") {
+        f.addLine(f.nextVarDeclaration() + "obj");
+    } else if(obj->getValue() == "&") {
+        if(isTemp) {
+            f.addLine(f.nextVarDeclaration() + genCall("get_home", {parentVar}));
+        } else {
+            f.addLine(f.nextVarDeclaration() + genCall("clone", {genCall("get_home", {parentVar})}));
+        }
     }
 }
 
@@ -173,7 +183,7 @@ void ApplicationGenerator::genData(Object* obj) {
         break;
     case STRING_TYPE:
         type = "EO_string";
-        value = genCall("make_string", {obj->getValue()});
+        value = genCall("make_string", {"L" + obj->getValue()});
         codeModel.addImport("org.eolang.string");
         break;
     case BYTES_TYPE:
@@ -201,10 +211,17 @@ void ApplicationGenerator::genData(Object* obj) {
     }
 }
 
+void ApplicationGenerator::genClass(Object* obj) {
+    std::string type = obj->getClassName();
+    f.addLine(f.nextVarDeclaration() + genCall("stack_alloc", {genCall("sizeof", {type})}));
+    f.addLine(genCall("init_" + type, {"(" + type + "*)" + f.getVar(), "(StackPos)" + f.getVar() + "-(StackPos)obj"}));
+}
+
 void ApplicationGenerator::genAttributesLength(Object* obj) {
     if(obj->getApplicationHead()->getType() == ARRAY_TYPE) {
         return;
     }
+    // TODO ARRAY
     f.addLine("int L_" + f.getVar() + " = " + std::to_string(obj->getApplicationAttributes().size()));
 }
 

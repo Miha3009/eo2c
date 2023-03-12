@@ -34,53 +34,53 @@
   [x] > eq /bool
 
   # Total number of bytes
-  #[] > size /int
-  #
+  [] > size /int
+
   # Represents a sub-sequence inside the current one
-  #[start len] > slice /bytes
-  #
+  [start len] > slice /bytes
+
   # Turn this chain of bytes into a string in UTF-8
-  #[] > as-string /string
-  #
+  [] > as-string /string
+
   # Turn this chain of eight bytes into an integer.
   # If there are less or more than eight bytes, there will
   # be an error returned.
-  #[] > as-int /int
-  #
+  [] > as-int /int
+
   # Turn this chain of eight bytes into a float.
   # If there are less or more than eight bytes, there will
   # be an error returned.
-  #[] > as-float /float
-  #
+  [] > as-float /float
+
   # Calculate bitwise and
-  #[b...] > and /bytes
-  #
+  [b...] > and /bytes
+
   # Calculate bitwise or
-  #[b...] > or /bytes
-  #
+  [b...] > or /bytes
+
   # Calculate bitwise xor
-  #[b...] > xor /bytes
-  #
+  [b...] > xor /bytes
+
   # Calculate bitwise not
-  #[] > not /bytes
-  #
+  [] > not /bytes
+
   # Calculate bitwise left shift
-  #[x] > left
-  #  ^.right (x.neg) > @
-  #
+  [x] > left
+    ^.right (x.neg) > @
+
   # Calculate bitwise right shift
-  #[x] > right /bytes
-  #
+  [x] > right /bytes
+
   # Converts to bool
-  #[] > as-bool
-  #  ^.eq 01- > @
-  #
+  [] > as-bool
+    ^.eq 01- > @
+
   # Return itself
-  #[] > as-bytes
-  #  ^ > @
-  #
+  [] > as-bytes
+    ^ > @
+
   # Converts this to hash
-  #[] > as-hash
+  #TODO[] > as-hash
   #  reduced. > @
   #    list
   #      bytes-as-array ^
@@ -96,4 +96,4 @@
   # Concatenation of two byte sequences:
   # the current and the provided one,
   # as a new sequence
-  #[b] > concat /bytes
+  [b] > concat /bytes

@@ -25,12 +25,12 @@ void Function::setType(FunctionType type, std::string varname) {
         body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
         body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
         body.push_back(genCall("stack_restore", {"pos"}));
-        body.push_back("return " + genCall("clone", {varname}));
+        body.push_back("return " + genCall("move_object", {varname}));
         break;
     case DECORATOR:
         body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
         body.push_back(genCall("stack_restore", {"pos"}));
-        body.push_back("return " + genCall("clone", {varname}));
+        body.push_back("return " + genCall("move_object", {varname}));
         break;
     case INNER:
         body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
@@ -218,7 +218,12 @@ ImportsMap& CodeModel::getImportsMap() {
 
 std::string CodeModel::getDefine() {
     std::string define = filename + "_H";
-    std::transform(define.begin(), define.end(), define.begin(), ::toupper);
+    std::transform(define.begin(), define.end(), define.begin(), [](unsigned char c) {
+        if((c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
+            return '_';
+        }
+        return (char)std::toupper(c);
+    });
     return define;
 }
 

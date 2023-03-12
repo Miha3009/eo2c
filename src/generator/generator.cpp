@@ -20,7 +20,7 @@ void Generator::genModel(Object* obj) {
     for(Object* child : obj->getChildren()) {
         genModel(child);
     }
-    if(obj->getType() == CLASS_TYPE) {
+    if(obj->getType() == CLASS_TYPE && !obj->isDecorator()) {
         genStruct(obj);
         genEval(obj);
         genInit(obj);
@@ -34,15 +34,18 @@ void Generator::genStruct(Object* obj) {
     for(Attribute& a : obj->getAttributes()) {
         s.fields.push_back({"int", a.name});
     }
-    if(!getValueType(obj).empty()) {
-        s.fields.push_back({getValueType(obj), "value"});
-    }
     for(Object* child : obj->getChildren()) {
+        if(child->isDecorator()) {
+            continue;
+        }
         if(child->getType() == CLASS_TYPE) {
             s.fields.push_back({child->getClassName(), child->getValue()});
-        } else if(child->getType() == APPLICATION_TYPE && !child->isDecorator()) {
+        } else if(child->getType() == APPLICATION_TYPE) {
             s.fields.push_back({"EO_object", child->getValue()});
         }
+    }
+    if(!getValueType(obj).empty()) {
+        s.fields.push_back({getValueType(obj), "value"});
     }
     codeModel.addStruct(s);
 }
@@ -75,12 +78,15 @@ void Generator::genInit(Object* obj) {
         offset_var,
     }));
     for(Object* child : obj->getChildren()) {
+        if(child->isDecorator()) {
+            continue;
+        }
         if(child->getType() == CLASS_TYPE) {
             f.addLine(genCall("init_" + child->getClassName(), {
                 "&obj->" + child->getValue(),
                 genCall("offsetof", {obj->getClassName(), child->getValue()})
             }));
-        } else if(child->getType() == APPLICATION_TYPE && !child->isDecorator()) {
+        } else if(child->getType() == APPLICATION_TYPE) {
             ApplicationGenerator appGen(child, codeModel, genEvalSignature(child, "obj_"));
             appGen.run();
             appGen.getFunction().setType(CHILD, appGen.getResultVar());
@@ -101,8 +107,10 @@ void Generator::genInit(Object* obj) {
     if(!getValueType(obj).empty()) {
         f.addLine("obj->value = value");
     }
-    if(obj->getClassName() == "bytes" || obj->getClassName() == "EO_string") {
-        f.addLine("obj->head.size += obj->value.length");
+    if(obj->getClassName() == "bytes") {
+        f.addLine("obj->head.size += sizeof(unsigned char) * obj->value.length");
+    } else if(obj->getClassName() == "EO_string") {
+        f.addLine("obj->head.size += sizeof(wchar_t) * obj->value.length");
     }
     codeModel.addFunction(f);
 }
@@ -119,6 +127,10 @@ void Generator::genEval(Object* obj) {
         f.signature = genEvalSignature(obj, "obj");
         f.addLine("return obj");
     } else {
+        if((*it)->isAtom()) {
+            codeModel.addFunctionAtom(getTemplate(obj));
+            return;
+        }
         ApplicationGenerator appGen(*it, codeModel, genEvalSignature(obj, "obj"));
         appGen.run();
         f = appGen.getFunction();
@@ -145,11 +157,12 @@ std::string Generator::getValueType(Object* obj) {
 }
 
 std::string Generator::getTemplate(Object* obj) {
+    std::string className = obj->isDecorator() ? obj->getParent()->getClassName() : obj->getClassName();
     for(Meta& m : unit.metas) {
         if(m.type == "package") {
             std::string package = m.value;
             std::replace(package.begin(), package.end(), '.', '/');
-            return (exeDir / fs::path("templates") / fs::path(package) / fs::path(obj->getClassName() + ".cpp")).string();
+            return (exeDir / fs::path("templates") / fs::path(package) / fs::path(className + ".cpp")).string();
         }
     }
     return "";

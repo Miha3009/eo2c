@@ -1,0 +1,23 @@
++package test
++alias org.eolang.seq
++alias test.test-int-1
++alias test.test-int-2
++alias test.test-int-3
++alias test.test-int-4
++alias test.test-int-5
++alias test.test-int-6
++alias test.test-int-7
++alias test.test-int-8
++alias test.test-int-9
+
+[] > test-int
+  seq > @
+    test-int-1
+    test-int-2
+    test-int-3
+    test-int-4
+    test-int-5
+    test-int-6
+    test-int-7
+    test-int-8
+    test-int-9

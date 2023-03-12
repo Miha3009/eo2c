@@ -1,0 +1,11 @@
++package test
++alias org.eolang.seq
++alias test.test-string-1
++alias test.test-string-2
++alias test.test-string-3
+
+[] > test-string
+  seq > @
+    test-string-1
+    test-string-2
+    test-string-3

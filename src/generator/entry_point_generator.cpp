@@ -37,16 +37,17 @@ bool EntryPointGenerator::writeMain() {
 
 void EntryPointGenerator::writeArguments(Function& f, Object* mainObject) {
     std::vector<Attribute> attributes = mainObject->getAttributes();
-    codeModel.addStdImport("<iostream>");
+    codeModel.addStdImport("<fcntl.h>");
+    f.addLine("_setmode(_fileno(stdout), _O_U16TEXT)");
     if(attributes.empty()) {
         f.addLine("if(argc > 1) {");
-        f.addLine("\tstd::cout << \"The program does not accept arguments\"");
+        f.addLine("\twprintf(L\"The program does not accept arguments\")");
         f.addLine("\treturn 0;");
         f.addLine("}");
     } else {
         if(!attributes.back().isVararg) {
             f.addLine("if(argc > " + std::to_string(attributes.size() + 1) + ") {");
-            f.addLine("\tstd::cout << \"The program accepts no more than " + std::to_string(attributes.size()) + " arguments\"");
+            f.addLine("\twprintf(L\"The program accepts no more than " + std::to_string(attributes.size()) + " arguments\")");
             f.addLine("\treturn 0");
             f.addLine("}");
         }

@@ -1,0 +1,10 @@
++package test
++alias org.eolang.io.stdout
+
+[] > test-float-7
+  if. > @
+    gt.
+      2.5
+      1.5
+    stdout "OK TEST FLOAT 7\n"
+    stdout "FAIL TEST FLOAT 7\n"
