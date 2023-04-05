@@ -4,7 +4,7 @@
 
 static const std::string currentCompilerVersion = "1.0.0";
 
-Config::Config(fs::path exeDir): exeDir{exeDir}, mainObjectPackage{""}, arguments{""}, mainObjectPackageChanged{false}, quiet{false} {
+Config::Config(fs::path exeDir): exeDir{exeDir}, mainObjectPackage{""}, arguments{""}, mainObjectPackageChanged{false}, quiet{false}, cmakeFlagsChanged{false} {
     setSources(fs::current_path());
     setBuildPath(fs::current_path() / fs::path(".eo2c"));
 }

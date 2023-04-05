@@ -22,7 +22,7 @@ struct EO_head {
   int attr_count;
   int varargs_pos;
   size_t size;
-  const void* ref;
+  const std::unordered_map<Tag, int>* offset_map;
 };
 
 struct EO_object {
@@ -44,7 +44,7 @@ void init_head(EO_object* obj,
                int parent_offset,
                int varargs_pos,
                size_t size,
-               const void* ref);
+               const std::unordered_map<Tag, int>* offset_map);
 
 typedef char* StackPos;
 
@@ -117,11 +117,7 @@ string_value make_string(const wchar_t* str);
 
 wchar_t* get_string_data(EO_object* obj);
 
-EO_object* make_meta_object(EO_object* parent, EO_object* (*eval)(EO_object*));
-
-inline EO_object* get_base_object(EO_object* obj) {
-  return (EO_object*)obj->head.ref;
-}
+EO_object* make_inner_application(EO_object* parent, EO_object* (*eval)(EO_object*));
 
 EO_object* make_array(int length);
 

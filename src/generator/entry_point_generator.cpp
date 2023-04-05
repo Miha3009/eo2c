@@ -37,8 +37,8 @@ bool EntryPointGenerator::writeMain() {
 
 void EntryPointGenerator::writeArguments(Function& f, Object* mainObject) {
     std::vector<Attribute> attributes = mainObject->getAttributes();
-    codeModel.addStdImport("<fcntl.h>");
-    f.addLine("_setmode(_fileno(stdout), _O_U16TEXT)");
+    codeModel.addStdImport("<clocale>");
+    f.addLine("setlocale(LC_ALL, \"\")");
     if(attributes.empty()) {
         f.addLine("if(argc > 1) {");
         f.addLine("\twprintf(L\"The program does not accept arguments\")");

@@ -9,21 +9,16 @@ Stack stack;
 int obj_count = 0;
 
 EO_object* evaluate(EO_object* obj) {
-//  std::cout << "EVAL " << (char*)obj - stack.data << " " << obj->head.id << std::endl;
   return obj->head.eval(obj);
 }
 
 EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
-  //std::cout << "GET_SUB: " << (StackPos)obj - stack.data << " " << tag << " " << ((StackPos)obj + obj->head.offset_table->at(tag)) - stack.data << std::endl;
-  if(obj->head.ref >= stack.data && obj->head.ref <= stack.data + STACK_SIZE) {
-    obj = evaluate(obj);
-  }
-  const std::unordered_map<Tag, int>* offset_table = (const std::unordered_map<Tag, int>*)obj->head.ref;
+  const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
   auto result_it = offset_table->find(tag);
   if(result_it == offset_table->end()) {
     if(!need_copy) {
       obj = evaluate(obj);
-      offset_table = ((const std::unordered_map<Tag, int>*)obj->head.ref);
+      offset_table = obj->head.offset_map;
       result_it = offset_table->find(tag);
     }
     if(result_it == offset_table->end()) {
@@ -43,14 +38,11 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
 }
 
 EO_object* ensure_sub(EO_object* obj, Tag tag) {
-  if(obj->head.ref >= stack.data && obj->head.ref <= stack.data + STACK_SIZE) {
-    obj = evaluate(obj);
-  }
-  const std::unordered_map<Tag, int>* offset_table = (const std::unordered_map<Tag, int>*)obj->head.ref;
+  const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
   auto result_it = offset_table->find(tag);
   if(result_it == offset_table->end()) {
     obj = evaluate(obj);
-    offset_table = (const std::unordered_map<Tag, int>*)obj->head.ref;
+    offset_table = obj->head.offset_map;
     result_it = offset_table->find(tag);
     if(result_it == offset_table->end()) {
       wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
@@ -73,7 +65,7 @@ void init_head(EO_object* obj,
                int parent_offset,
                int varargs_pos,
                size_t size,
-               const void* ref) {
+               const std::unordered_map<Tag, int>* offset_map) {
   obj->head.id = obj_count++;
   obj->head.eval = eval;
   obj->head.parent_offset = parent_offset;
@@ -81,8 +73,7 @@ void init_head(EO_object* obj,
   obj->head.attr_count = 0;
   obj->head.varargs_pos = varargs_pos;
   obj->head.size = size;
-  obj->head.ref = ref;
-//  std::cout << "OBJ " << (char*)obj - stack.data << " " << obj->head.id << std::endl;
+  obj->head.offset_map = offset_map;
 }
 
 void add_attribute(EO_object* obj, EO_object* attr, int length) {
@@ -96,12 +87,10 @@ void add_attribute(EO_object* obj, EO_object* attr, int length) {
       arr = apply_offset(obj, array_offset);
     }
     *((int*)((EO_array*)arr + 1) + arr->head.attr_count) = calc_offset(arr, attr);
-    //attr->head.parent_offset = calc_offset(arr, attr);
     ++arr->head.attr_count;
     arr->head.size += attr->head.size;
   } else {
     *((int*)(obj + 1) + obj->head.attr_count) = calc_offset(obj, attr);
-    //attr->head.parent_offset = calc_offset(obj, attr);
     ++obj->head.attr_count;
   }
 }
@@ -109,13 +98,11 @@ void add_attribute(EO_object* obj, EO_object* attr, int length) {
 void add_array_attribute(EO_object* obj, EO_object* arr) {
   *((int*)(obj + 1) + obj->head.varargs_pos) = calc_offset(obj, arr);
   ++obj->head.attr_count;
-  //arr->head.parent_offset = calc_offset(obj, arr);
 }
 
 void add_attribute_to_array(EO_object* obj, EO_object* attr) {
   *((int*)((EO_array*)obj + 1) + obj->head.attr_count) = calc_offset(obj, attr);
   ++obj->head.attr_count;
-  //attr->head.parent_offset = calc_offset(obj, attr);
 }
 
 EO_object* clone(EO_object* obj) {
@@ -133,9 +120,7 @@ EO_object* move_object(EO_object* obj) {
     return obj;
   }
   std::memmove(obj_clone, obj, obj->head.size);
-  if(obj_clone->head.parent_offset != 0) {
-    obj_clone->head.parent_offset += calc_offset(obj, obj_clone);
-  }
+  obj_clone->head.parent_offset = 0;
   return obj_clone;
 }
 
@@ -159,10 +144,10 @@ wchar_t* get_string_data(EO_object* obj) {
   return (wchar_t*)((StackPos)obj + sizeof(EO_string));
 }
 
-EO_object* make_meta_object(EO_object* parent, EO_object* (*eval)(EO_object*)) {
-  EO_object* meta_obj = stack_alloc(sizeof(EO_object));
-  init_head(meta_obj, eval, calc_offset(parent, meta_obj), -1, sizeof(EO_object), parent);
-  return meta_obj;
+EO_object* make_inner_application(EO_object* parent, EO_object* (*eval)(EO_object*)) {
+  EO_object* inner_application = stack_alloc(sizeof(EO_object));
+  init_head(inner_application, eval, calc_offset(parent, inner_application), -1, sizeof(EO_object), &offset_default);
+  return inner_application;
 }
 
 EO_object* make_array(int length) {

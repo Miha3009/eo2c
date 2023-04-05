@@ -109,7 +109,7 @@ void ApplicationGenerator::genInnerApplication(Object* obj) {
     Function f2 = appGen.getFunction();
     f2.setType(INNER, appGen.getResultVar());
     codeModel.addFunction(f2);
-    f.addLine(f.nextVarDeclaration() + genCall("make_meta_object", {"obj", f2.getName()}));
+    f.addLine(f.nextVarDeclaration() + genCall("make_inner_application", {"obj", f2.getName()}));
 }
 
 void ApplicationGenerator::genVar(Object* obj, std::string parentVar, bool isTemp) {
@@ -128,19 +128,6 @@ void ApplicationGenerator::genVar(Object* obj, std::string parentVar, bool isTem
             return;
         }
     }
-    /*bool isAttribute = false;
-    for(Attribute& a : classObj->getAttributes()) {
-        if(a.name == obj->getValue()) {
-            isAttribute = true;
-            break;
-        }
-    }
-    std::string tmp;
-    if(!isAttribute) {
-        tmp = genCall("(EO_object*)&", {"(" + classType + "*)obj"}) + "->" + obj->getValue();
-    } else {
-        tmp = genCall("apply_offset", {"obj", "((" + classType + "*)obj)" + "->" + obj->getValue()});
-    }*/
     std::string copyBool = isTemp ? "false" : "true";
     f.addLine(f.nextVarDeclaration() + genCall("get_sub", {parentVar, codeModel.getIdTagTable().getTag(obj->getValue()), copyBool}));
 }

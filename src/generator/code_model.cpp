@@ -23,7 +23,7 @@ void Function::setType(FunctionType type, std::string varname) {
     {
     case CHILD:
         body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
-        body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
+        body.insert(body.begin(), "EO_object* obj = " + genCall("get_home", {"obj_"}));
         body.push_back(genCall("stack_restore", {"pos"}));
         body.push_back("return " + genCall("move_object", {varname}));
         break;
@@ -33,7 +33,7 @@ void Function::setType(FunctionType type, std::string varname) {
         body.push_back("return " + genCall("move_object", {varname}));
         break;
     case INNER:
-        body.insert(body.begin(), "EO_object* obj = " + genCall("get_base_object", {"obj_"}));
+        body.insert(body.begin(), "EO_object* obj = " + genCall("get_home", {"obj_"}));
         body.push_back("return " + varname);
         break;
     default:

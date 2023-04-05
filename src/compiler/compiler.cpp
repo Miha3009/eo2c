@@ -238,7 +238,7 @@ bool Compiler::runExecutable() {
     std::string cmd = "\"" + (config.getBuildPath() / fs::path("build") / fs::path("eolang.exe")).string() + "\" " + config.getArguments();
     return std::system(cmd.c_str()) == 0;
 #elif defined(__linux__)
-    std::string cmd = "." + (config.getBuildPath() / fs::path("build") / fs::path("eolang")).string() + " " + config.getArguments();
+    std::string cmd = "./" + (config.getBuildPath() / fs::path("build") / fs::path("eolang")).string() + " " + config.getArguments();
     return std::system(cmd.c_str()) == 0;
 #else
     return false;
