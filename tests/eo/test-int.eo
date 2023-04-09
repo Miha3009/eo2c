@@ -1,14 +1,5 @@
 +package test
 +alias org.eolang.seq
-+alias test.test-int-1
-+alias test.test-int-2
-+alias test.test-int-3
-+alias test.test-int-4
-+alias test.test-int-5
-+alias test.test-int-6
-+alias test.test-int-7
-+alias test.test-int-8
-+alias test.test-int-9
 
 [] > test-int
   seq > @
@@ -21,3 +12,75 @@
     test-int-7
     test-int-8
     test-int-9
+
+  [] > test-int-1
+    if. > @
+      eq.
+        4
+        2.plus 2
+      QQ.io.stdout "OK TEST INT 1\n"
+      QQ.io.stdout "FAIL TEST INT 1\n"
+
+  [] > test-int-2
+    if. > @
+      eq.
+        24
+        2.times 3 4
+      QQ.io.stdout "OK TEST INT 2\n"
+      QQ.io.stdout "FAIL TEST INT 2\n"
+
+  [] > test-int-3
+    if. > @
+      eq.
+        4
+        50.div 3 4
+      QQ.io.stdout "OK TEST INT 3\n"
+      QQ.io.stdout "FAIL TEST INT 3\n"
+
+  [] > test-int-4
+    if. > @
+      eq.
+        -5
+        5.neg
+      QQ.io.stdout "OK TEST INT 4\n"
+      QQ.io.stdout "FAIL TEST INT 4\n"
+
+  [] > test-int-5
+    if. > @
+      gt.
+        7
+        6
+      QQ.io.stdout "OK TEST INT 5\n"
+      QQ.io.stdout "FAIL TEST INT 5\n"
+
+  [] > test-int-6
+    if. > @
+      gte.
+        7
+        6
+      QQ.io.stdout "OK TEST INT 6\n"
+      QQ.io.stdout "FAIL TEST INT 6\n"
+
+  [] > test-int-7
+    if. > @
+      eq.
+        00-00-00-00-00-00-01-2C-
+        300.as-bytes
+      QQ.io.stdout "OK TEST INT 7\n"
+      QQ.io.stdout "FAIL TEST INT 7\n"
+
+  [] > test-int-8
+    if. > @
+      lt.
+        6
+        7
+      QQ.io.stdout "OK TEST INT 8\n"
+      QQ.io.stdout "FAIL TEST INT 8\n"
+
+  [] > test-int-9
+    if. > @
+      lte.
+        6
+        6
+      QQ.io.stdout "OK TEST INT 9\n"
+      QQ.io.stdout "FAIL TEST INT 9\n"

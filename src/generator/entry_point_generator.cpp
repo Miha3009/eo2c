@@ -21,14 +21,20 @@ bool EntryPointGenerator::run() {
 bool EntryPointGenerator::writeMain() {
     Function f;
     f.signature = "int main(int argc, char *argv[])";
-    TranslationUnit* unit = codeModel.getImportsMap().getUnit(mainObjectPackage);
-    if(unit == nullptr) {
+    size_t lastDot = mainObjectPackage.rfind(".");
+    if(lastDot == std::string::npos) {
+        std::cout << "Incorrect format of main package\n";
         return false;
     }
-    std::string className = unit->root->getClassName();
+    Object* mainObj = codeModel.getImportsMap().getObject(mainObjectPackage, mainObjectPackage.substr(lastDot + 1));
+    if(mainObj == nullptr) {
+        std::cout << "Main package not found\n";
+        return false;
+    }
+    std::string className = mainObj->getClassName();
     f.addLine("EO_object* obj = " + genCall("stack_alloc", {genCall("sizeof", {className})}));
     f.addLine(genCall("init_" + className, {"(" + className + "*)obj", "0"}));
-    writeArguments(f, unit->root);
+    writeArguments(f, mainObj);
     f.addLine("evaluate(obj)");
     f.addLine("return 0");
     codeModel.addFunction(f);

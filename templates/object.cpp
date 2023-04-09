@@ -16,11 +16,9 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
   const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
   auto result_it = offset_table->find(tag);
   if(result_it == offset_table->end()) {
-    if(!need_copy) {
-      obj = evaluate(obj);
-      offset_table = obj->head.offset_map;
-      result_it = offset_table->find(tag);
-    }
+    obj = evaluate(obj);
+    offset_table = obj->head.offset_map;
+    result_it = offset_table->find(tag);
     if(result_it == offset_table->end()) {
       wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
       exit(0);
@@ -35,21 +33,6 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
     result = clone(result);
   }
   return result;
-}
-
-EO_object* ensure_sub(EO_object* obj, Tag tag) {
-  const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
-  auto result_it = offset_table->find(tag);
-  if(result_it == offset_table->end()) {
-    obj = evaluate(obj);
-    offset_table = obj->head.offset_map;
-    result_it = offset_table->find(tag);
-    if(result_it == offset_table->end()) {
-      wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
-      exit(0);
-    }
-  }
-  return obj;
 }
 
 EO_object* get_parent(EO_object* obj) {
@@ -74,6 +57,9 @@ void init_head(EO_object* obj,
   obj->head.varargs_pos = varargs_pos;
   obj->head.size = size;
   obj->head.offset_map = offset_map;
+  if(varargs_pos != -1) {
+    *((int*)(obj + 1) + varargs_pos) = 0;
+  }
 }
 
 void add_attribute(EO_object* obj, EO_object* attr, int length) {

@@ -1,7 +1,7 @@
 #include "../string.h"
 
 EO_object* eval_EO_stdin_next_line(EO_object* obj) {
-    static wchar_t buf[1024];
+    static wchar_t buf[1 << 12];
     int i = 0;
     while(wscanf(L"%c", &buf[i])) {
         if(buf[i] == L'\n') {

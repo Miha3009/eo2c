@@ -33,8 +33,6 @@ EO_object* evaluate(EO_object* obj);
 
 EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy);
 
-EO_object* ensure_sub(EO_object* obj, Tag tag);
-
 EO_object* get_parent(EO_object* obj);
 
 EO_object* get_home(EO_object* obj);

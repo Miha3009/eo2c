@@ -20,7 +20,7 @@ void Generator::genModel(Object* obj) {
     for(Object* child : obj->getChildren()) {
         genModel(child);
     }
-    if(obj->getType() == CLASS_TYPE && !obj->isDecorator()) {
+    if(obj->getType() == CLASS_TYPE && !obj->isDecorator() && !obj->isRoot()) {
         genStruct(obj);
         genEval(obj);
         genInit(obj);
@@ -77,40 +77,47 @@ void Generator::genInit(Object* obj) {
         genCall("sizeof", {obj->getClassName()}),
         offset_var,
     }));
-    for(Object* child : obj->getChildren()) {
-        if(child->isDecorator()) {
-            continue;
+    if(obj->getType() == CLASS_TYPE) {
+        for(Object* child : obj->getChildren()) {
+            if(child->isDecorator()) {
+                continue;
+            }
+            if(child->getType() == CLASS_TYPE) {
+                f.addLine(genCall("init_" + child->getClassName(), {
+                    "&obj->" + child->getValue(),
+                    genCall("offsetof", {obj->getClassName(), child->getValue()})
+                }));
+            } else if(child->getType() == APPLICATION_TYPE) {
+                ApplicationGenerator appGen(child, codeModel, genEvalSignature(child, "obj_"));
+                appGen.run();
+                appGen.getFunction().setType(CHILD, appGen.getResultVar());
+                codeModel.addFunction(appGen.getFunction());
+                f.addLine(genCall("init_head", {
+                    "&obj->" + child->getValue(),
+                    appGen.getFunction().getName(),
+                    genCall("offsetof", {obj->getClassName(), child->getValue()}),
+                    "-1",
+                    "sizeof(EO_object)",
+                    "&offset_default"
+                }));
+                genInit(child);
+                Struct s;
+                s.name = child->getClassName();
+                s.fields.push_back({"EO_head", "head"});
+                codeModel.addStruct(s);
+            }
         }
-        if(child->getType() == CLASS_TYPE) {
-            f.addLine(genCall("init_" + child->getClassName(), {
-                "&obj->" + child->getValue(),
-                genCall("offsetof", {obj->getClassName(), child->getValue()})
-            }));
-        } else if(child->getType() == APPLICATION_TYPE) {
-            ApplicationGenerator appGen(child, codeModel, genEvalSignature(child, "obj_"));
-            appGen.run();
-            appGen.getFunction().setType(CHILD, appGen.getResultVar());
-            codeModel.addFunction(appGen.getFunction());
-            f.addLine(genCall("init_head", {
-                "&obj->" + child->getValue(),
-                appGen.getFunction().getName(),
-                genCall("offsetof", {obj->getClassName(), child->getValue()}),
-                "-1",
-                "sizeof(EO_object)",
-                "&offset_default"
-            }));
+        for(Attribute a : obj->getAttributes()) {
+            f.addLine("obj->" + a.name + " = 0");
         }
-    }
-    for(Attribute a : obj->getAttributes()) {
-        f.addLine("obj->" + a.name + " = 0");
-    }
-    if(!getValueType(obj).empty()) {
-        f.addLine("obj->value = value");
-    }
-    if(obj->getClassName() == "bytes") {
-        f.addLine("obj->head.size += sizeof(unsigned char) * obj->value.length");
-    } else if(obj->getClassName() == "EO_string") {
-        f.addLine("obj->head.size += sizeof(wchar_t) * obj->value.length");
+        if(!getValueType(obj).empty()) {
+            f.addLine("obj->value = value");
+        }
+        if(obj->getClassName() == "bytes") {
+            f.addLine("obj->head.size += sizeof(unsigned char) * obj->value.length");
+        } else if(obj->getClassName() == "EO_string") {
+            f.addLine("obj->head.size += sizeof(wchar_t) * obj->value.length");
+        }
     }
     codeModel.addFunction(f);
 }

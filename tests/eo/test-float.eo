@@ -1,15 +1,5 @@
 +package test
 +alias org.eolang.seq
-+alias test.test-float-1
-+alias test.test-float-2
-+alias test.test-float-3
-+alias test.test-float-4
-+alias test.test-float-5
-+alias test.test-float-6
-+alias test.test-float-7
-+alias test.test-float-8
-+alias test.test-float-9
-+alias test.test-float-10
 
 [] > test-float
   seq > @
@@ -23,3 +13,83 @@
     test-float-8
     test-float-9
     test-float-10
+
+  [] > test-float-1
+    if. > @
+      eq.
+        40-09-1E-B8-51-EB-85-1F-
+        3.14.as-bytes
+      QQ.io.stdout "OK TEST FLOAT 1\n"
+      QQ.io.stdout "FAIL TEST FLOAT 1\n"
+
+  [] > test-float-2
+    if. > @
+      eq.
+        3.14
+        3.14
+      QQ.io.stdout "OK TEST FLOAT 2\n"
+      QQ.io.stdout "FAIL TEST FLOAT 2\n"
+
+  [] > test-float-3
+    if. > @
+      eq.
+        4.0
+        1.5.plus 2.5
+      QQ.io.stdout "OK TEST FLOAT 3\n"
+      QQ.io.stdout "FAIL TEST FLOAT 3\n"
+
+  [] > test-float-4
+    if. > @
+      eq.
+        2.25
+        1.5.times 1.5
+      QQ.io.stdout "OK TEST FLOAT 4\n"
+      QQ.io.stdout "FAIL TEST FLOAT 4\n"
+
+  [] > test-float-5
+    if. > @
+      eq.
+        -1.5
+        1.5.neg
+      QQ.io.stdout "OK TEST FLOAT 5\n"
+      QQ.io.stdout "FAIL TEST FLOAT 5\n"
+
+  [] > test-float-6
+    if. > @
+      eq.
+        0.75
+        1.5.div 2.0
+      QQ.io.stdout "OK TEST FLOAT 6\n"
+      QQ.io.stdout "FAIL TEST FLOAT 6\n"
+
+  [] > test-float-7
+    if. > @
+      gt.
+        2.5
+        1.5
+      QQ.io.stdout "OK TEST FLOAT 7\n"
+      QQ.io.stdout "FAIL TEST FLOAT 7\n"
+
+  [] > test-float-8
+    if. > @
+      gte.
+        1.5
+        1.5
+      QQ.io.stdout "OK TEST FLOAT 8\n"
+      QQ.io.stdout "FAIL TEST FLOAT 8\n"
+
+  [] > test-float-9
+    if. > @
+      lt.
+        1.5
+        2.5
+      QQ.io.stdout "OK TEST FLOAT 9\n"
+      QQ.io.stdout "FAIL TEST FLOAT 9\n"
+
+  [] > test-float-10
+    if. > @
+      lte.
+        1.5
+        1.5
+      QQ.io.stdout "OK TEST FLOAT 10\n"
+      QQ.io.stdout "FAIL TEST FLOAT 10\n"

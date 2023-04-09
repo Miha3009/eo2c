@@ -1,11 +1,32 @@
 +package test
 +alias org.eolang.seq
-+alias test.test-array-1
-+alias test.test-array-2
-+alias test.test-array-3
 
 [] > test-array
-  seq > @
+  QQ.seq > @
     test-array-1
     test-array-2
     test-array-3
+
+  [] > test-array-1
+    if. > @
+      eq.
+        3
+        (* 1 2 3).length
+      QQ.io.stdout "OK TEST ARRAY 1\n"
+      QQ.io.stdout "FAIL TEST ARRAY 1\n"
+
+  [] > test-array-2
+    if. > @
+      eq.
+        5
+        (* 8 5 9).at 1
+      QQ.io.stdout "OK TEST ARRAY 2\n"
+      QQ.io.stdout "FAIL TEST ARRAY 2\n"
+
+  [] > test-array-3
+    if. > @
+      eq.
+        7
+        ((* 8 5 9).with 7).at 3
+      QQ.io.stdout "OK TEST ARRAY 3\n"
+      QQ.io.stdout "FAIL TEST ARRAY 3\n"

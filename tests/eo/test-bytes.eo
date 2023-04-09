@@ -1,18 +1,5 @@
 +package test
 +alias org.eolang.seq
-+alias test.test-bytes-1
-+alias test.test-bytes-2
-+alias test.test-bytes-3
-+alias test.test-bytes-4
-+alias test.test-bytes-5
-+alias test.test-bytes-6
-+alias test.test-bytes-7
-+alias test.test-bytes-8
-+alias test.test-bytes-9
-+alias test.test-bytes-10
-+alias test.test-bytes-11
-+alias test.test-bytes-12
-+alias test.test-bytes-13
 
 [] > test-bytes
   seq > @
@@ -29,3 +16,107 @@
     test-bytes-11
     test-bytes-12
     test-bytes-13
+
+  [] > test-bytes-1
+    if. > @
+      eq.
+        01-23-45-
+        01-23-45-
+      QQ.io.stdout "OK TEST BYTES 1\n"
+      QQ.io.stdout "FAIL TEST BYTES 1\n"
+
+  [] > test-bytes-2
+    if. > @
+      eq.
+        3
+        01-23-45-.size
+      QQ.io.stdout "OK TEST BYTES 2\n"
+      QQ.io.stdout "FAIL TEST BYTES 2\n"
+
+  [] > test-bytes-3
+    if. > @
+      eq.
+        23-45-
+        01-23-45-67-.slice 1 2
+      QQ.io.stdout "OK TEST BYTES 3\n"
+      QQ.io.stdout "FAIL TEST BYTES 3\n"
+
+  [] > test-bytes-4
+    if. > @
+      eq.
+        300
+        00-00-00-00-00-00-01-2C-.as-int
+      QQ.io.stdout "OK TEST BYTES 4\n"
+      QQ.io.stdout "FAIL TEST BYTES 4\n"
+
+  [] > test-bytes-5
+    if. > @
+      eq.
+        3.14
+        40-09-1E-B8-51-EB-85-1F-.as-float
+      QQ.io.stdout "OK TEST BYTES 5\n"
+      QQ.io.stdout "FAIL TEST BYTES 5\n"
+
+  [] > test-bytes-6
+    if. > @
+      eq.
+        00-01-
+        00-11-.and 01-01-
+      QQ.io.stdout "OK TEST BYTES 6\n"
+      QQ.io.stdout "FAIL TEST BYTES 6\n"
+
+  [] > test-bytes-7
+    if. > @
+      eq.
+        01-11-
+        00-11-.or 01-01-
+      QQ.io.stdout "OK TEST BYTES 7\n"
+      QQ.io.stdout "FAIL TEST BYTES 7\n"
+
+  [] > test-bytes-8
+    if. > @
+      eq.
+        01-10-
+        00-11-.xor 01-01-
+      QQ.io.stdout "OK TEST BYTES 8\n"
+      QQ.io.stdout "FAIL TEST BYTES 8\n"
+
+  [] > test-bytes-9
+    if. > @
+      eq.
+        CD-
+        32-.not
+      QQ.io.stdout "OK TEST BYTES 9\n"
+      QQ.io.stdout "FAIL TEST BYTES 9\n"
+
+  [] > test-bytes-10
+    if. > @
+      eq.
+        15-
+        A9-.right 3
+      QQ.io.stdout "OK TEST BYTES 10\n"
+      QQ.io.stdout "FAIL TEST BYTES 10\n"
+
+  [] > test-bytes-11
+    if. > @
+      eq.
+        A8-
+        15-.left 3
+      QQ.io.stdout "OK TEST BYTES 11\n"
+      QQ.io.stdout "FAIL TEST BYTES 11\n"
+
+  [] > test-bytes-12
+    if. > @
+      eq.
+        TRUE
+        01-.as-bool
+      QQ.io.stdout "OK TEST BYTES 12\n"
+      QQ.io.stdout "FAIL TEST BYTES 12\n"
+
+  [] > test-bytes-13
+    if. > @
+      eq.
+        12-34-56-
+        12-34-.concat 56-
+      QQ.io.stdout "OK TEST BYTES 13\n"
+      QQ.io.stdout "FAIL TEST BYTES 13\n"

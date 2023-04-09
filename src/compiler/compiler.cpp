@@ -128,7 +128,7 @@ bool Compiler::parse(std::vector<TranslationUnit>& units) {
 bool Compiler::optimize(std::vector<TranslationUnit>& units) {
     int successCount = 0;
     for(TranslationUnit& unit : units) {
-        Optimizer optimizer(unit, config.getIdTagTable());
+        Optimizer optimizer(unit, config.getIdTagTable(), importsMap);
         if(optimizer.run()) {
             ++successCount;
 #ifdef DEBUG

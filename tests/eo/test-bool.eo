@@ -1,9 +1,5 @@
 +package test
 +alias org.eolang.seq
-+alias test.test-bool-1
-+alias test.test-bool-2
-+alias test.test-bool-3
-+alias test.test-bool-4
 
 [] > test-bool
   seq > @
@@ -11,3 +7,35 @@
     test-bool-2
     test-bool-3
     test-bool-4
+
+  [] > test-bool-1
+    if. > @
+      eq.
+        TRUE
+        TRUE
+      QQ.io.stdout "OK TEST BOOL 1\n"
+      QQ.io.stdout "FAIL TEST BOOL 1\n"
+
+  [] > test-bool-2
+    if.
+      eq. > @
+        TRUE
+        FALSE.not
+      QQ.io.stdout "OK TEST BOOL 2\n"
+      QQ.io.stdout "FAIL TEST BOOL 2\n"
+
+  [] > test-bool-3
+    if.
+      eq. > @
+        FALSE
+        TRUE.and FALSE
+      QQ.io.stdout "OK TEST BOOL 3\n"
+      QQ.io.stdout "FAIL TEST BOOL 3\n"
+
+  [] > test-bool-4
+    if.
+      eq. > @
+        TRUE
+        TRUE.or FALSE
+      QQ.io.stdout "OK TEST BOOL 4\n"
+      QQ.io.stdout "FAIL TEST BOOL 4\n"

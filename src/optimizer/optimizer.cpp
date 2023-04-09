@@ -4,15 +4,15 @@
 
 //#define DEBUG
 
-Optimizer::Optimizer(TranslationUnit& unit, IdTagTable& idTagTable): unit{unit}, idTagTable{idTagTable} {
+Optimizer::Optimizer(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap): unit{unit}, idTagTable{idTagTable}, importsMap{importsMap} {
 }
 
 bool Optimizer::run() {
     if(!unit.root->validate()) {
         return false;
     }
-    unit.root = removeRootWithOneChild(unit.root);
     applyInverseNotation(unit.root);
+    expandQQ(unit.root, unit);
     unit.root = removeReduntObjects(unit.root);
     convertIdentifier(unit.root);
     updateIdTagTable(unit.root);
@@ -20,17 +20,6 @@ bool Optimizer::run() {
     unit.root->printDebug();
 #endif // DEBUG
     return true;
-}
-
-Object* Optimizer::removeRootWithOneChild(Object* obj) {
-    if(obj->getChildren().size() == 1) {
-        Object* tmpObj = obj->getChildren()[0];
-        tmpObj->setParent(nullptr);
-        obj->clearChildren();
-        delete obj;
-        return tmpObj;
-    }
-    return obj;
 }
 
 void Optimizer::applyInverseNotation(Object* obj) {
@@ -44,6 +33,28 @@ void Optimizer::applyInverseNotation(Object* obj) {
         children[0]->addChild(children[1]);
         children[0]->addChild(tmpObj);
         children.erase(children.begin() + 1);
+    }
+    obj->setChildren(children);
+}
+
+void Optimizer::expandQQ(Object* obj, TranslationUnit& unit) {
+    for(Object* child : obj->getChildren()) {
+        expandQQ(child, unit);
+    }
+    std::vector<Object*> children = obj->getChildren();
+    if(obj->getType() == SEQUENCE_TYPE && children[0]->getType() == REF_TYPE && children[0]->getOriginValue() == "QQ") {
+        std::string package = "org.eolang";
+        std::string resultPackage = package;
+        int resultI = 1;
+        for(int i = 1; i < children.size(); ++i) {
+            package = package + "." + children[i]->getOriginValue();
+            if(importsMap.getUnit(package) != nullptr) {
+                resultPackage = package;
+                resultI = i;
+            }
+        }
+        children.erase(children.begin(), children.begin() + resultI);
+        unit.metas.push_back({"alias", resultPackage});
     }
     obj->setChildren(children);
 }
@@ -75,7 +86,7 @@ void Optimizer::convertIdentifier(Object* obj) {
     for(Object* child : obj->getChildren()) {
         convertIdentifier(child);
     }
-    if(obj->getType() == CLASS_TYPE || obj->getType() == VAR_TYPE) {
+    if(obj->getType() == CLASS_TYPE || obj->getType() == VAR_TYPE || obj->getType() == APPLICATION_TYPE) {
         obj->setValue(convertIdentifier(obj->getOriginValue()));
     }
     std::vector<Attribute> attributes = obj->getAttributes();
@@ -86,7 +97,7 @@ void Optimizer::convertIdentifier(Object* obj) {
 }
 
 std::string Optimizer::convertIdentifier(std::string id) {
-    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array", "stdin", "stdout"};
+    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array", "stdin", "stdout", "sprintf"};
     if(std::find(keywords.begin(), keywords.end(), id) != keywords.end()) {
         return "EO_" + id;
     }

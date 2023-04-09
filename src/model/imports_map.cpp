@@ -9,8 +9,12 @@ void ImportsMap::build(fs::path buildPath, std::vector<TranslationUnit>& units) 
                 package = meta.value;
             }
         }
-        if(package != "" && unit.root->getOriginValue() != "") {
-            map[package + "." + unit.root->getOriginValue()] = &unit;
+        if(package != "") {
+            for(Object* obj : unit.root->getChildren()) {
+                if(obj->getOriginValue() != "") {
+                    map[package + "." + obj->getOriginValue()] = &unit;
+                }
+            }
         }
     }
 }
@@ -33,9 +37,14 @@ std::string ImportsMap::getObjectImport(TranslationUnit& from) {
     return fs::relative(buildPath / fs::path("object.h"), from.buildHeader.parent_path()).string();
 }
 
-std::string ImportsMap::getClassName(std::string alias) {
+Object* ImportsMap::getObject(std::string alias, std::string objectName) {
     if(map.count(alias) == 1) {
-        return map.at(alias)->root->getClassName();
+        TranslationUnit* unit = map.at(alias);
+        for(Object* obj : unit->root->getChildren()) {
+            if(obj->getOriginValue() == objectName) {
+                return obj;
+            }
+        }
     }
-    return "";
+    return nullptr;
 }

@@ -150,7 +150,7 @@ std::string Object::getClassName() {
     }
     std::string className = value;
     Object* obj = parent;
-    while(obj != nullptr) {
+    while(!obj->isRoot()) {
         if(obj->type == CLASS_TYPE) {
             if(obj->value.empty()) {
                 value = std::to_string(anonymousClassCount++);
@@ -189,9 +189,10 @@ Object* Object::getParent() {
 Object* Object::getClassObject() {
     if(type == CLASS_TYPE) {
         return this;
-    } else {
+    } else if(parent != nullptr) {
         return parent->getClassObject();
     }
+    return nullptr;
 }
 
 Object* Object::getApplicationHead() {

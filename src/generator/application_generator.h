@@ -23,17 +23,15 @@ public:
 
 private:
     void genApplication(Object* obj);
+    void genSequence(Object* obj);
     void genPart(Object* obj, std::string parentVar, bool isHead, bool isTemp);
     void genInnerApplication(Object* obj);
     void genVar(Object* obj, std::string parentVar, bool isTemp);
     void genRef(Object* obj, std::string parentVar, bool isTemp);
     void genData(Object* obj);
     void genClass(Object* obj);
-    void genSequenceHead(Object* obj, bool isHead);
-    void genSequenceTail(Object* obj, bool isHead);
-    void genAttributesLength(Object* obj);
-    void clearEvaluate();
-    void print(Object* obj, int s);
+    bool findInClass(Object* obj);
+    bool findVarInAlias(Object* obj);
 };
 
 #endif //APPLICATION_GENERATOR_H

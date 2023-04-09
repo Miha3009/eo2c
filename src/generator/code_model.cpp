@@ -22,6 +22,7 @@ void Function::setType(FunctionType type, std::string varname) {
     switch (type)
     {
     case CHILD:
+    case INNER:
         body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
         body.insert(body.begin(), "EO_object* obj = " + genCall("get_home", {"obj_"}));
         body.push_back(genCall("stack_restore", {"pos"}));
@@ -31,10 +32,6 @@ void Function::setType(FunctionType type, std::string varname) {
         body.insert(body.begin(), "StackPos pos = " + genCall("stack_store"));
         body.push_back(genCall("stack_restore", {"pos"}));
         body.push_back("return " + genCall("move_object", {varname}));
-        break;
-    case INNER:
-        body.insert(body.begin(), "EO_object* obj = " + genCall("get_home", {"obj_"}));
-        body.push_back("return " + varname);
         break;
     default:
         break;
@@ -228,11 +225,10 @@ std::string CodeModel::getDefine() {
 }
 
 std::string CodeModel::getClassNameByValue(std::string value) {
-    value = "." + value;
     std::string alias = "";
     for(Meta& meta : unit.metas) {
-        if(meta.type == "alias" && meta.value.length() >= value.length() &&
-           0 == meta.value.compare(meta.value.length() - value.length(), value.length(), value)) {
+        if(meta.type == "alias" && meta.value.length() >= value.length() + 1 &&
+           0 == meta.value.compare(meta.value.length() - value.length() - 1, value.length() + 1, "." + value)) {
             alias = meta.value;
             break;
         }
@@ -242,7 +238,7 @@ std::string CodeModel::getClassNameByValue(std::string value) {
         return "";
     }
     sourceImports.insert("\"" + import + "\"");
-    return importsMap.getClassName(alias);
+    return importsMap.getObject(alias, value)->getClassName();
 }
 
 std::string genVarName(int num) {

@@ -18,7 +18,7 @@ public:
     TranslationUnit* getUnit(std::string alias);
     std::string getImport(TranslationUnit& from, std::string alias);
     std::string getObjectImport(TranslationUnit& from);
-    std::string getClassName(std::string alias);
+    Object* getObject(std::string alias, std::string objectName);
 };
 
 #endif // IMPORTS_MAP_H
