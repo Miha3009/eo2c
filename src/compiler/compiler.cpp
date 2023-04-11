@@ -176,6 +176,7 @@ bool Compiler::copyBaseFiles() {
         fs::path objectCpp = config.getBuildPath() / fs::path("object.cpp");
         if(!fs::exists(objectH)) {            
             fs::copy(config.getExeDir() / fs::path("templates") / fs::path("object.h"), objectH);
+
         }
         if(!fs::exists(objectCpp)) {
             fs::copy(config.getExeDir() / fs::path("templates") / fs::path("object.cpp"), objectCpp);
@@ -192,10 +193,10 @@ bool Compiler::genMain(std::vector<TranslationUnit>& units) {
     mainUnit.buildCpp = config.getBuildPath() / fs::path("main.cpp");
     mainUnit.buildHeader = config.getBuildPath() / fs::path("main.h");
     TranslationUnit* unit = importsMap.getUnit(config.getMainObjectPackage());
-    if(fs::exists(mainUnit.buildCpp) && fs::exists(mainUnit.buildHeader) && !config.isMainObjectPackageChanged() && unit && !unit->updated) {
+    if(fs::exists(mainUnit.buildCpp) && fs::exists(mainUnit.buildHeader) && !config.isMainObjectPackageChanged() && unit && !unit->updated && !config.isStackSizeChanged()) {
         return true;
     }
-    EntryPointGenerator generator(mainUnit, config.getIdTagTable(), importsMap, units, config.getMainObjectPackage());
+    EntryPointGenerator generator(mainUnit, config.getIdTagTable(), importsMap, units, config.getMainObjectPackage(), config.getStackSize());
     return generator.run();
 }
 

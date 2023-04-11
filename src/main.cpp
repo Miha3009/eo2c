@@ -38,6 +38,7 @@ int main(int argc, char** argv)
         .addArgWithFlagAndName('q', "quiet", false, false, "Disable progress messages.", "Don't print anything except errors and output of the EO program.")
         .addArgWithFlagAndName('f', "flags", true, false, "Flags for CMake.", "Specify the flags with which CMake will be run during compilation.")
         .addArgWithFlagAndName('a', "arguments", true, false, "Arguments for executable.", "Specifty the arguments that will be passed to the executable program during dataization")
+        .addArgWithNameOnly("stack", true, false, "Size of stack.", "Size of stack for objects in bytes.")
         .addHelp(true, argv[0], SL("Compiler from EO to C++ (indev)."));
         cmd.parse();
     }
@@ -67,6 +68,9 @@ int main(int argc, char** argv)
     }
     if(cmd.isDefined("-a")) {
         config.setArguments(cmd.value("-a"));
+    }
+    if(cmd.isDefined("--stack")) {
+        config.setStackSize(cmd.value("--stack"));
     }
     Compiler compiler(config);
     if(cmd.isDefined("generate")) {

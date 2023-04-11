@@ -13,6 +13,7 @@
     test-float-8
     test-float-9
     test-float-10
+    test-float-11
 
   [] > test-float-1
     if. > @
@@ -93,3 +94,11 @@
         1.5
       QQ.io.stdout "OK TEST FLOAT 10\n"
       QQ.io.stdout "FAIL TEST FLOAT 10\n"
+
+  [] > test-float-11
+    if. > @
+      eq.
+        2.5
+        4.0.minus 1.0 0.5
+      QQ.io.stdout "OK TEST FLOAT 11\n"
+      QQ.io.stdout "FAIL TEST FLOAT 11\n"

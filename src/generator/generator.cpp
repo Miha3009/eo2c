@@ -123,7 +123,7 @@ void Generator::genInit(Object* obj) {
 }
 
 void Generator::genEval(Object* obj) {
-    if(obj->isAtom()) {
+    if(obj->hasFlags(ATOM_FLAG)) {
         codeModel.addFunctionAtom(getTemplate(obj));
         return;
     }
@@ -134,7 +134,7 @@ void Generator::genEval(Object* obj) {
         f.signature = genEvalSignature(obj, "obj");
         f.addLine("return obj");
     } else {
-        if((*it)->isAtom()) {
+        if((*it)->hasFlags(ATOM_FLAG)) {
             codeModel.addFunctionAtom(getTemplate(obj));
             return;
         }

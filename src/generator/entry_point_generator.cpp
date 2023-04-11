@@ -3,7 +3,7 @@
 #include "entry_point_generator.h"
 
 EntryPointGenerator::EntryPointGenerator(TranslationUnit& mainUnit, IdTagTable& idTagTable, ImportsMap& importsMap, std::vector<TranslationUnit>& units,
-    std::string mainObjectPackage): codeModel{mainUnit, idTagTable, importsMap}, units{units}, mainObjectPackage{mainObjectPackage} {    
+    std::string mainObjectPackage, int stackSize): codeModel{mainUnit, idTagTable, importsMap}, units{units}, mainObjectPackage{mainObjectPackage}, stackSize{stackSize} {
 }
 
 EntryPointGenerator::~EntryPointGenerator() {
@@ -32,6 +32,9 @@ bool EntryPointGenerator::writeMain() {
         return false;
     }
     std::string className = mainObj->getClassName();
+    codeModel.addStdImport("<clocale>");
+    f.addLine("setlocale(LC_ALL, \"\")");
+    f.addLine(genCall("stack_init", {std::to_string(stackSize)}));
     f.addLine("EO_object* obj = " + genCall("stack_alloc", {genCall("sizeof", {className})}));
     f.addLine(genCall("init_" + className, {"(" + className + "*)obj", "0"}));
     writeArguments(f, mainObj);
@@ -43,8 +46,6 @@ bool EntryPointGenerator::writeMain() {
 
 void EntryPointGenerator::writeArguments(Function& f, Object* mainObject) {
     std::vector<Attribute> attributes = mainObject->getAttributes();
-    codeModel.addStdImport("<clocale>");
-    f.addLine("setlocale(LC_ALL, \"\")");
     if(attributes.empty()) {
         f.addLine("if(argc > 1) {");
         f.addLine("\twprintf(L\"The program does not accept arguments\")");

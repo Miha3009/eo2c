@@ -7,10 +7,7 @@ static int anonymousClassCount = 0;
 Object::Object(Object* parent, objectType type) {
     this->type = type;
     this->parent = parent;
-    this->atom = false;
-    this->clone = false;
-    this->vararg = false;
-    this->dot = false;
+    this->flags = 0;
 }
 
 Object::~Object() {
@@ -25,14 +22,25 @@ Object::~Object() {
     }
 }
 
-Object* Object::makeChild() {
-    return makeChild(CLASS_TYPE);
-}
-
 Object* Object::makeChild(objectType type) {
     Object* child = new Object(this, type);
     children.push_back(child);
     return child;
+}
+
+Object* Object::makeParent(objectType type) {
+    Object* tmpObj = new Object(this, this->type);
+    tmpObj->flags = this->flags;
+    tmpObj->originValue = this->originValue;
+    tmpObj->value = this->value;
+    tmpObj->setChildren(this->children);
+    this->flags = 0;
+    this->originValue = "";
+    this->value = "";
+    clearChildren();
+    addChild(tmpObj);
+    this->type = type;
+    return this;
 }
 
 void Object::addChild(Object* child) {
@@ -57,17 +65,21 @@ void Object::setValue(std::string value) {
 
 void Object::setOriginValue(std::string value) {
     int l = value.length();
-    if(type == VAR_TYPE || type == REF_TYPE) {
-        if(l > 0 && value[l-1] == '\'') {
-            this->clone = true;
-            value = value.substr(0, l-1);
-        }
+    if((type == VAR_TYPE || type == REF_TYPE) && l > 0) {
         if(l > 3 && value[0] == '.' && value[1] == '.' && value[2] == '.') {
-            this->vararg = true;
+            addFlags(VARARGS_FLAG);
             value = value.substr(3);
         }
-        if(l > 0 && value[l-1] == '.') {
-            this->dot = true;
+        if(value[l-1] == '\'') {
+            addFlags(CLONE_FLAG);
+            value = value.substr(0, l-1);
+        }
+        if(value[l-1] == '.') {
+            addFlags(DOT_FLAG);
+            value = value.substr(0, l-1);
+        }
+        if(value[l-1] == '!') {
+            addFlags(CONSTANT_FLAG);
             value = value.substr(0, l-1);
         }
     }
@@ -83,8 +95,8 @@ void Object::setParent(Object* parent) {
     this->parent = parent;
 }
 
-void Object::setAtom() {
-    this->atom = true;
+void Object::addFlags(int flags) {
+    this->flags |= flags;
 }
 
 void Object::addAttribute(std::string name) {
@@ -124,24 +136,12 @@ bool Object::isRoot() {
     return parent == nullptr;
 }
 
-bool Object::isAtom() {
-    return atom;
-}
-
-bool Object::isClone() {
-    return clone;
-}
-
-bool Object::isVararg() {
-    return vararg;
-}
-
-bool Object::isDot() {
-    return dot;
-}
-
 bool Object::isDecorator() {
     return originValue == "@";
+}
+
+bool Object::hasFlags(int flags) {
+    return (this->flags & flags) == flags;
 }
 
 std::string Object::getClassName() {

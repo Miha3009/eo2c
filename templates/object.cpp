@@ -20,13 +20,13 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
     offset_table = obj->head.offset_map;
     result_it = offset_table->find(tag);
     if(result_it == offset_table->end()) {
-      wprintf(L"ERROR TAG %d NOT FOUND\n", tag);
+      wprintf(L"Error: tag %d not found\n", tag);
       exit(0);
     }
   }
   EO_object* result = (EO_object*)((StackPos)obj + (*result_it).second);
-  EO_object* last_attribute = (EO_object*)((EO_object**)(obj + 1) + obj->head.attr_count);
-  if(((void*)result) < last_attribute) {
+  StackPos last_attribute = (StackPos)((int*)(obj + 1) + obj->head.attr_count);
+  if(last_attribute - (StackPos)result > 0) {
     result = apply_offset(obj, *((int*)result));
   }
   if(need_copy) {
@@ -43,6 +43,12 @@ EO_object* get_home(EO_object* obj) {
   return obj->head.home;
 }
 
+EO_object* get_id(EO_object* obj) {
+  EO_object* result = stack_alloc(sizeof(EO_int));
+  init_EO_int((EO_int*)result, 0, obj->head.id);
+  return result;
+}
+
 void init_head(EO_object* obj,
                EO_object* (*eval)(EO_object*),
                int parent_offset,
@@ -57,28 +63,58 @@ void init_head(EO_object* obj,
   obj->head.varargs_pos = varargs_pos;
   obj->head.size = size;
   obj->head.offset_map = offset_map;
-  if(varargs_pos != -1) {
-    *((int*)(obj + 1) + varargs_pos) = 0;
+}
+
+EO_object* stack_alloc(size_t size) {
+  EO_object* obj = (EO_object*)stack.pos;
+  stack.pos += size;
+  if(stack.pos > stack.end) {
+    wprintf(L"Error: stack overflow\n");
+    exit(0);
+  }
+  return obj;
+}
+
+void add_attribute_start(EO_object* obj, int length) {
+  if(obj->head.varargs_pos == 0) {
+      EO_object* arr = make_array(length - obj->head.attr_count);
+      *((int*)(obj + 1) + obj->head.varargs_pos) = calc_offset(obj, arr);
+      ++obj->head.attr_count;
   }
 }
 
+void add_attribute_end(EO_object* obj) {
+  obj->head.size = stack.pos - (StackPos)obj;
+}
+
 void add_attribute(EO_object* obj, EO_object* attr, int length) {
-  if(obj->head.attr_count == obj->head.varargs_pos) {
+  if(obj->head.attr_count >= (unsigned int)obj->head.varargs_pos) {
     int array_offset = *((int*)(obj + 1) + obj->head.varargs_pos);
-    EO_object* arr;
-    if(array_offset == 0) {
-      arr = make_array(length - obj->head.attr_count);
-      *((int*)(obj + 1) + obj->head.attr_count) = calc_offset(obj, arr);
-    } else {
-      arr = apply_offset(obj, array_offset);
-    }
+    EO_object* arr = apply_offset(obj, array_offset);
     *((int*)((EO_array*)arr + 1) + arr->head.attr_count) = calc_offset(arr, attr);
     ++arr->head.attr_count;
     arr->head.size += attr->head.size;
   } else {
     *((int*)(obj + 1) + obj->head.attr_count) = calc_offset(obj, attr);
     ++obj->head.attr_count;
+    if(obj->head.attr_count == obj->head.varargs_pos) {
+      EO_object* arr = make_array(length - obj->head.attr_count);
+      *((int*)(obj + 1) + obj->head.varargs_pos) = calc_offset(obj, arr);
+      ++obj->head.attr_count;
+    }
   }
+}
+
+void add_attribute_by_tag(EO_object* obj, EO_object* attr, Tag tag) {
+  const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
+  auto result_it = offset_table->find(tag);
+  if(result_it == offset_table->end()) {
+    wprintf(L"Error: tag %d not found\n", tag);
+    exit(0);
+  }
+  int* result = (int*)((StackPos)obj + (*result_it).second);
+  *result = calc_offset(obj, attr);
+  ++obj->head.attr_count;
 }
 
 void add_array_attribute(EO_object* obj, EO_object* arr) {

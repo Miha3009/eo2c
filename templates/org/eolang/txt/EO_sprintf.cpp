@@ -9,8 +9,8 @@ EO_object* eval_EO_sprintf(EO_object* obj) {
 	StackPos pos = stack_store();
     wchar_t* format = get_string_data(evaluate(apply_offset(obj, ((EO_sprintf*)obj)->format)));
     EO_object* args = evaluate(apply_offset(obj, ((EO_sprintf*)obj)->args));
-    int i = 0, j = 0, k = 0;
-    while(format[i]) {
+    int j = 0;
+    for(int i = 0, k = 0; format[i]; ++i) {
         if(format[i] == '%') {
             int s = 0;
             while(format[i] && format[i] != 'd' && format[i] != 'f' && format[i] != 's') {
@@ -22,7 +22,7 @@ EO_object* eval_EO_sprintf(EO_object* obj) {
             buf2[s+1] = '\0';
             if(format[i] == 'd') {
                 long long value = ((EO_int*)evaluate(array_at(args, k++)))->value;
-                j += swprintf(buf + j, buf2, value);
+                j += swprintf(buf + j, L"%lld", value);
             } else if(format[i] == 'f') {
                 double value = ((EO_float*)evaluate(array_at(args, k++)))->value;
                 j += swprintf(buf + j, buf2, value);
@@ -37,7 +37,6 @@ EO_object* eval_EO_sprintf(EO_object* obj) {
             buf[j] = format[i];
             ++j;
         }
-        ++i;
     }
     buf[j] = '\0';
 	stack_restore(pos);

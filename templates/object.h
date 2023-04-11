@@ -6,8 +6,6 @@
 #include <cstring>
 #include <unordered_map>
 
-static const int STACK_SIZE = 1 << 20;
-
 typedef int Tag;
 
 struct EO_object;
@@ -37,6 +35,8 @@ EO_object* get_parent(EO_object* obj);
 
 EO_object* get_home(EO_object* obj);
 
+EO_object* get_id(EO_object* obj);
+
 void init_head(EO_object* obj,
                EO_object* (*eval)(EO_object*),
                int parent_offset,
@@ -47,17 +47,20 @@ void init_head(EO_object* obj,
 typedef char* StackPos;
 
 struct Stack {
-  char data[STACK_SIZE];
-  StackPos pos = (StackPos)&data;
+  char* data;
+  StackPos pos;
+  StackPos end;
 };
 
 extern Stack stack;
 
-inline EO_object* stack_alloc(size_t size) {
-  EO_object* obj = (EO_object*)stack.pos;
-  stack.pos += size;
-  return obj;
+inline void stack_init(size_t size) {
+  stack.data = new char[size];
+  stack.pos = stack.data;
+  stack.end = stack.data + size;
 }
+
+EO_object* stack_alloc(size_t size);
 
 inline StackPos stack_store() {
   return stack.pos;
@@ -75,11 +78,13 @@ inline EO_object* apply_offset(EO_object* obj, int offset) {
   return (EO_object*)((StackPos)obj + offset);
 }
 
-inline void update_size(EO_object* obj) {
-  obj->head.size = stack.pos - (StackPos)obj;
-}
+void add_attribute_start(EO_object* obj, int length);
+
+void add_attribute_end(EO_object* obj);
 
 void add_attribute(EO_object* obj, EO_object* attr, int length);
+
+void add_attribute_by_tag(EO_object* obj, EO_object* attr, Tag tag);
 
 void add_array_attribute(EO_object* obj, EO_object* arr);
 

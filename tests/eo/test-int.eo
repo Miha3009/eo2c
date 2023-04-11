@@ -12,6 +12,7 @@
     test-int-7
     test-int-8
     test-int-9
+    test-int-10
 
   [] > test-int-1
     if. > @
@@ -84,3 +85,11 @@
         6
       QQ.io.stdout "OK TEST INT 9\n"
       QQ.io.stdout "FAIL TEST INT 9\n"
+
+  [] > test-int-10
+    if. > @
+      eq.
+        2
+        5.minus 2 1
+      QQ.io.stdout "OK TEST INT 10\n"
+      QQ.io.stdout "FAIL TEST INT 10\n"

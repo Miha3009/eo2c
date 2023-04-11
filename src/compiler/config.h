@@ -23,6 +23,8 @@ class Config {
     std::string arguments;
     IdTagTable idTagTable;
     std::vector<fs::path> eoFiles;
+    int stackSize;
+    bool stackSizeChanged;
 
 public:
     Config(fs::path exeDir);
@@ -36,6 +38,7 @@ public:
     void setQuiet(bool quiet);
     void setCMakeFlags(std::string cmakeFlags);
     void setArguments(std::string arguments);
+    void setStackSize(std::string stack);
     fs::path getExeDir();
     fs::path getSources();
     fs::path getBuildPath();
@@ -43,9 +46,11 @@ public:
     std::string getCMakeFlags();
     std::string getArguments();
     IdTagTable& getIdTagTable();
+    int getStackSize();
     bool isMainObjectPackageChanged();
     bool isQuiet();
     bool isCMakeFlagsChanged();
+    bool isStackSizeChanged();
 
 private:
     void updateProjectStructure(std::vector<TranslationUnit>& units);

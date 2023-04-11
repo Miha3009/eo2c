@@ -4,9 +4,9 @@
 
 static const std::string currentCompilerVersion = "1.0.0";
 
-Config::Config(fs::path exeDir): exeDir{exeDir}, mainObjectPackage{""}, arguments{""}, mainObjectPackageChanged{false}, quiet{false}, cmakeFlagsChanged{false} {
+Config::Config(fs::path exeDir): exeDir{exeDir}, mainObjectPackage{""}, arguments{""}, mainObjectPackageChanged{false},
+    quiet{false}, cmakeFlagsChanged{false}, stackSize{0} {
     setSources(fs::current_path());
-    setBuildPath(fs::current_path() / fs::path(".eo2c"));
 }
 
 void Config::load() {
@@ -18,7 +18,7 @@ void Config::load() {
     if(compilerVersion != currentCompilerVersion) {
         return;
     }
-    std::string savedBuildPath, savedMainObjectPackage, savedCMakeFlags, id, eoFile;
+    std::string savedBuildPath, savedMainObjectPackage, savedCMakeFlags, savedStackSize, id, eoFile;
     int count, tag;
     s >> savedBuildPath;
     if(buildPath.empty()) {
@@ -29,6 +29,12 @@ void Config::load() {
         mainObjectPackage = savedMainObjectPackage;
     } else {
         mainObjectPackageChanged = savedMainObjectPackage != mainObjectPackage;
+    }
+    s >> savedStackSize;
+    if(stackSize == 0) {
+        setStackSize(savedStackSize);
+    } else {
+        stackSizeChanged = stackSize != atoi(savedStackSize.c_str());        
     }
     s.get();
     std::getline(s, savedCMakeFlags);
@@ -56,6 +62,7 @@ void Config::save() {
     s << compilerVersion << "\n";
     s << fs::absolute(buildPath).string() << "\n";
     s << mainObjectPackage << "\n";
+    s << std::to_string(stackSize) << "\n";
     s << cmakeFlags << "\n";
     s << idTagTable.getMap().size() << "\n";
     for(auto& idTag : idTagTable.getMap()) {
@@ -124,6 +131,10 @@ void Config::setArguments(std::string arguments) {
     this->arguments = arguments;
 }
 
+void Config::setStackSize(std::string stackSize) {
+    this->stackSize = atoi(stackSize.c_str());
+}
+
 fs::path Config::getExeDir() {
     return exeDir;
 }
@@ -134,11 +145,7 @@ fs::path Config::getSources() {
 
 fs::path Config::getBuildPath() {
     if(buildPath.empty()) {
-        if(fs::is_directory(sources)) {
-            return this->sources;
-        } else {
-            return this->sources.parent_path();
-        }
+        buildPath = fs::current_path() / fs::path(".eo2c");
     }
     return buildPath;
 }
@@ -159,6 +166,13 @@ IdTagTable& Config::getIdTagTable() {
     return idTagTable;
 }
 
+int Config::getStackSize() {
+    if(stackSize == 0) {
+        stackSize = 1 << 20;
+    }
+    return stackSize;
+}
+
 bool Config::isMainObjectPackageChanged() {
     return mainObjectPackageChanged;
 }
@@ -169,6 +183,10 @@ bool Config::isQuiet() {
 
 bool Config::isCMakeFlagsChanged() {
     return cmakeFlagsChanged;
+}
+
+bool Config::isStackSizeChanged() {
+    return stackSizeChanged;
 }
 
 void Config::updateProjectStructure(std::vector<TranslationUnit>& units) {

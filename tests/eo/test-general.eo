@@ -1,0 +1,58 @@
++package test
++alias org.eolang.seq
+
+[] > test-general
+  seq > @
+    test-general-1
+    test-general-2
+    test-general-3
+    test-general-4
+
+  # Complex attributes
+  [] > test-general-1
+    if. > @
+      eq.
+        25
+        1.plus ((2.plus 3).times 4) ((1.plus 1).plus (1.plus 1))
+      QQ.io.stdout "OK TEST GENERAL 1\n"
+      QQ.io.stdout "FAIL TEST GENERAL 1\n"
+
+  # Recursive
+  [] > test-general-2
+    [n] > rec
+      if. > @
+        eq.
+          5
+          n
+        n
+        n.plus (rec (n.plus 1))
+
+    if. > @
+      eq.
+        15
+        rec 0
+      QQ.io.stdout "OK TEST GENERAL 2\n"
+      QQ.io.stdout "FAIL TEST GENERAL 2\n"
+
+  # Varargs
+  [] > test-general-3
+    * 1 2 3 > arr
+    if. > @
+      eq.
+        6
+        0.plus ...arr
+      QQ.io.stdout "OK TEST GENERAL 3\n"
+      QQ.io.stdout "FAIL TEST GENERAL 3\n"
+
+  # Attributes by names
+  [] > test-general-4
+    [x y] > diff
+      x.minus y > @
+    if. > @
+      eq.
+        1
+        diff
+          3:y
+          4:x
+      QQ.io.stdout "OK TEST GENERAL 4\n"
+      QQ.io.stdout "FAIL TEST GENERAL 4\n"

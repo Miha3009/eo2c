@@ -17,6 +17,6 @@ EO_object* eval_list_mappedi(EO_object* obj) {
     for(int i = 0; i < len; ++i) {
 		add_attribute_to_array(result, clone(new_arr[i]));
 	}
-	update_size(result);
+	add_attribute_end(result);
     return result;
 }

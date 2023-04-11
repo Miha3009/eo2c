@@ -65,16 +65,16 @@
   [x...] > plus /int
 
   # Subtract from the current one
-  #TODO[x...] > minus
-  #  mapped. > x-neg
-  #    list
-  #      x
-  #    [element]
-  #      neg. > @
-  #        element
-  #  ^.plus > @
-  #    ...x-neg
-  #
+  [x...] > minus
+    mapped. > x-neg
+      list
+        x
+      [element]
+        neg. > @
+          element
+    ^.plus > @
+      ...x-neg
+
   # Multiplication this one by another int
   [x...] > times /int
 

@@ -24,16 +24,13 @@ class Object {
     std::vector<Object*> children;
     std::vector<Attribute> attributes;
     Object* parent;
-    bool atom;
-    bool clone;
-    bool vararg;
-    bool dot;
+    int flags;
 
 public:
     Object(Object* parent, objectType type);
     ~Object();
-    Object* makeChild();
     Object* makeChild(objectType type);
+    Object* makeParent(objectType type);
     void addChild(Object* child);
     void setChildren(std::vector<Object*> children);
     void clearChildren();
@@ -41,17 +38,14 @@ public:
     void setOriginValue(std::string value);
     void setType(objectType type);
     void setParent(Object* parent);
-    void setAtom();
+    void addFlags(int flags);
     void addAttribute(std::string name);
     void setAttributes(std::vector<Attribute> attributes);
     void addToSequence(objectType type, std::string value);
     bool validate();
     bool isRoot();
-    bool isAtom();
-    bool isClone();
-    bool isVararg();
-    bool isDot();
     bool isDecorator();
+    bool hasFlags(int flags);
     std::string getClassName();
     std::string getValue();
     std::string getOriginValue();

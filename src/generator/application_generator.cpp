@@ -31,17 +31,20 @@ void ApplicationGenerator::genApplication(Object* obj) {
     std::vector<Object*> attributes = obj->getApplicationAttributes();
     if(!attributes.empty()) {
         varsWithAttributes.insert(headVar);
+        f.addLine(genCall("add_attribute_start", {headVar, std::to_string(attributes.size())}));
         for(Object* a : attributes) {
             genPart(a, "obj", false, false);
             if(head->getType() == ARRAY_TYPE) {
                 f.addLine(genCall("add_attribute_to_array", {headVar, f.getVar()}));
-            } else if(a->isVararg()) {
+            } else if(a->hasFlags(VARARGS_FLAG)) {
                 f.addLine(genCall("add_array_attribute", {headVar, f.getVar()}));
+            } else if(a->getType() == NAMED_ATTRIBUTE_TYPE) {
+                f.addLine(genCall("add_attribute_by_tag", {headVar, f.getVar(), codeModel.getIdTagTable().getTag(a->getValue())}));
             } else {
                 f.addLine(genCall("add_attribute", {headVar, f.getVar(), std::to_string(attributes.size())}));
             }
         }
-        f.addLine(genCall("update_size", {headVar}));
+        f.addLine(genCall("add_attribute_end", {headVar}));
     }
 }
 
@@ -75,6 +78,8 @@ void ApplicationGenerator::genPart(Object* obj, std::string parentVar, bool isHe
         genRef(obj, parentVar, isTemp);
     } else if(obj->getType() == CLASS_TYPE) {
         genClass(obj);
+    } else if(obj->getType() == NAMED_ATTRIBUTE_TYPE) {
+        genPart(obj->getChildren()[0], parentVar, isHead, isTemp);
     } else {
         genData(obj);
     }
@@ -114,6 +119,8 @@ void ApplicationGenerator::genRef(Object* obj, std::string parentVar, bool isTem
         } else {
             f.addLine(f.nextVarDeclaration() + genCall("clone", {genCall("get_home", {parentVar})}));
         }
+    } else if(obj->getValue() == "<") {
+        f.addLine(f.nextVarDeclaration() + genCall("get_id", {parentVar}));
     }
 }
 

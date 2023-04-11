@@ -6,6 +6,7 @@
 +alias test.test-float
 +alias test.test-array
 +alias test.test-string
++alias test.test-general
 
 [] > test-all
   seq > @
@@ -15,3 +16,4 @@
     test-float
     test-array
     test-string
+    test-general

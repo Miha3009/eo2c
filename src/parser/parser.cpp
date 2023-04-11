@@ -307,11 +307,11 @@ _4:
     goto _end;
 _5:
     if(isName()) {
-        curObj->setAtom();
+        curObj->addFlags(ATOM_FLAG);
         goto _end;
     }
     if(isSymbol('?')) {
-        curObj->setAtom();
+        curObj->addFlags(ATOM_FLAG);
         next(1);
         goto _end;
     }
@@ -426,6 +426,7 @@ _2:
 
 bool Parser::isHas() {
     if(isSymbol(':')) {
+        curObj = curObj->makeParent(NAMED_ATTRIBUTE_TYPE);
         next(1);
         goto _1;
     }
@@ -436,6 +437,7 @@ _1:
         goto _end;
     }
     if(isName()) {
+        curObj->setOriginValue(lexValue);
         goto _end;
     }
     return errorMessage("'^' or name expected");
@@ -451,7 +453,7 @@ bool Parser::isApplication(bool parseHtail) {
     Object* tmpObj = curObj;
     if(parseHtail) {
         curObj->setType(APPLICATION_TYPE);
-        curObj = curObj->makeChild();
+        curObj = curObj->makeChild(APPLICATION_TYPE);
     }
     if(isHead()) {
         curObj->setType(dataType);
@@ -582,7 +584,7 @@ bool Parser::isHead() {
         next(1);
         goto _1;
     }
-    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&')) {
+    if(isSymbol('@') || isSymbol('^') || isSymbol('$') || isSymbol('&') || isSymbol('<')) {
         dataType = REF_TYPE;
         tmpValue = str[pos];
         next(1);
@@ -649,6 +651,7 @@ _1:
             !isSymbol('\0') &&
             !isSymbol(']') &&
             !isSymbol(')') &&
+            !isSymbol(':') &&
             !isSymbol('.')) {
         lexValue+= str[pos];
         next(1);

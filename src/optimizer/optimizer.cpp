@@ -27,7 +27,7 @@ void Optimizer::applyInverseNotation(Object* obj) {
     for(int i = 0; i < children.size(); ++i) {
         applyInverseNotation(children[i]);
     }
-    if(obj->getType() == APPLICATION_TYPE && (children[0]->getType() == VAR_TYPE || children[0]->getType() == REF_TYPE) && children[0]->isDot()) {
+    if(obj->getType() == APPLICATION_TYPE && (children[0]->getType() == VAR_TYPE || children[0]->getType() == REF_TYPE) && children[0]->hasFlags(DOT_FLAG)) {
         Object* tmpObj = children[0];
         children[0] = new Object(obj, SEQUENCE_TYPE);
         children[0]->addChild(children[1]);
@@ -97,7 +97,7 @@ void Optimizer::convertIdentifier(Object* obj) {
 }
 
 std::string Optimizer::convertIdentifier(std::string id) {
-    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array", "stdin", "stdout", "sprintf"};
+    static std::vector<std::string> keywords = {"if", "while", "and", "or", "xor", "not", "bool", "int", "float", "string", "char", "array", "stdin", "stdout", "sprintf", "sscanf", "nan"};
     if(std::find(keywords.begin(), keywords.end(), id) != keywords.end()) {
         return "EO_" + id;
     }
@@ -118,7 +118,7 @@ std::string Optimizer::convertIdentifier(std::string id) {
 }
 
 void Optimizer::updateIdTagTable(Object* obj) {
-    if(obj->getType() == VAR_TYPE || obj->getType() == CLASS_TYPE || (obj->getType() == APPLICATION_TYPE && !obj->isDecorator())) {
+    if(obj->getType() == VAR_TYPE || obj->getType() == CLASS_TYPE || (obj->getType() == APPLICATION_TYPE && !obj->isDecorator()) || obj->getType() == NAMED_ATTRIBUTE_TYPE) {
         idTagTable.update(obj->getValue());
     }
     for(Attribute& a : obj->getAttributes()) {

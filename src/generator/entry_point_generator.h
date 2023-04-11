@@ -15,10 +15,11 @@ class EntryPointGenerator {
     CodeModel codeModel;
     std::vector<TranslationUnit>& units;
     std::string mainObjectPackage;
+    int stackSize;
     std::ofstream out;
 
 public:
-    EntryPointGenerator(TranslationUnit& mainUnit, IdTagTable& idTagTable, ImportsMap& importsMap, std::vector<TranslationUnit>& units, std::string mainObjectPackage);
+    EntryPointGenerator(TranslationUnit& mainUnit, IdTagTable& idTagTable, ImportsMap& importsMap, std::vector<TranslationUnit>& units, std::string mainObjectPackage, int stackSize);
     ~EntryPointGenerator();
     bool run();
 
