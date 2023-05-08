@@ -94,25 +94,25 @@
   [x] > minus
     ^.plus (x.neg) > @
 
-  # x'th power of $
-  [x] > pow
-    if. > @
-      x.lt 0.0
-      0.0
-      if.
-        x.eq 0.0
-        1
-        if.
-          x.gt 0.0
-          if.
-            not-int x
-            ^
-            if.
-              (x.as-int.mod 2).eq 0
-              positive-infinity
-              ^
-          nan
-
+  #TODO x'th power of $
+  #[x] > pow
+  #  if. > @
+  #    x.lt 0.0
+  #    0.0
+  #    if.
+  #      x.eq 0.0
+  #      1
+  #      if.
+  #        x.gt 0.0
+  #        if.
+  #          not-int x
+  #          ^
+  #          if.
+  #            (x.as-int.mod 2).eq 0
+  #            positive-infinity
+  #            ^
+  #        nan
+  #
   #TODO[x] > not-int
   #      x.as-int > as-integer!
   #      and. > @

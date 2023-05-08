@@ -1,4 +1,5 @@
 #include "imports_map.h"
+#include <iostream>
 
 void ImportsMap::build(fs::path buildPath, std::vector<TranslationUnit>& units) {
     this->buildPath = buildPath;
@@ -47,4 +48,8 @@ Object* ImportsMap::getObject(std::string alias, std::string objectName) {
         }
     }
     return nullptr;
+}
+
+void ImportsMap::setValueForTest(std::string alias, TranslationUnit* unit) {
+    map[alias] = unit;
 }

@@ -3,7 +3,8 @@
 #include "cmake_generator.h"
 #include "util.h"
 
-CmakeGenerator::CmakeGenerator(std::vector<TranslationUnit>& units, fs::path buildPath): units{units}, buildPath{buildPath} {    
+CmakeGenerator::CmakeGenerator(std::vector<TranslationUnit>& units, fs::path buildPath, bool lib, std::string project): 
+    units{units}, buildPath{buildPath}, lib{lib}, project{project} {
 }
 
 CmakeGenerator::~CmakeGenerator() {
@@ -29,7 +30,7 @@ void CmakeGenerator::run() {
 
 void CmakeGenerator::writeHead() {
     out << "cmake_minimum_required(VERSION 3.5 FATAL_ERROR)\n\n";
-    out << "project(eolang)\n\n";
+    out << "project(" << project << ")\n\n";
 }
 
 void CmakeGenerator::writeIncludeDirectories() {
@@ -50,13 +51,20 @@ void CmakeGenerator::writeIncludeDirectories() {
 }
 
 void CmakeGenerator::writeSetSources() {
-    out << "set(SOURCES object.cpp main.cpp";
+    out << "set(SOURCES object.cpp";
+    if(!lib) {
+        out << " main.cpp";
+    }
     for(TranslationUnit& unit : units) {
         out << " " << convertSeparator(unit.buildCpp.lexically_relative(buildPath).string());
     }
-    out << ")\n";
+    out << ")\n\n";
 }
 
 void CmakeGenerator::writeTail() {
-    out << "add_executable(eolang ${SOURCES})\n";
+    if(lib) {
+        out << "add_library(" << project << " ${SOURCES})\n";
+    } else {
+        out << "add_executable(" << project << " ${SOURCES})\n";
+    }
 }

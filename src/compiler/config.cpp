@@ -1,11 +1,12 @@
 #include <fstream>
 #include "config.h"
 #include <iostream>
+#include <algorithm>
 
 static const std::string currentCompilerVersion = "1.0.0";
 
 Config::Config(fs::path exeDir): exeDir{exeDir}, mainObjectPackage{""}, arguments{""}, mainObjectPackageChanged{false},
-    quiet{false}, cmakeFlagsChanged{false}, stackSize{0} {
+    quiet{false}, cmakeFlagsChanged{false}, stackSize{0}, lib{-1}, libChanged{false}, projectName{""}, projectNameChanged{false} {
     setSources(fs::current_path());
 }
 
@@ -18,8 +19,8 @@ void Config::load() {
     if(compilerVersion != currentCompilerVersion) {
         return;
     }
-    std::string savedBuildPath, savedMainObjectPackage, savedCMakeFlags, savedStackSize, id, eoFile;
-    int count, tag;
+    std::string savedBuildPath, savedMainObjectPackage, savedCMakeFlags, savedStackSize, savedProjectName, id, eoFile;
+    int savedLib, count, tag;
     s >> savedBuildPath;
     if(buildPath.empty()) {
         buildPath = fs::path(savedBuildPath);
@@ -53,6 +54,18 @@ void Config::load() {
         s >> eoFile;
         eoFiles.push_back(fs::path(eoFile));
     }
+    s >> savedLib;
+    if(lib == -1) {
+        lib = savedLib;
+    } else {
+        libChanged = savedLib != lib;
+    }
+    s >> savedProjectName;
+    if(projectName == "") {
+        projectName = savedProjectName;
+    } else {
+        projectNameChanged = savedProjectName != projectName;
+    }
     s.close();
 }
 
@@ -65,13 +78,20 @@ void Config::save() {
     s << std::to_string(stackSize) << "\n";
     s << cmakeFlags << "\n";
     s << idTagTable.getMap().size() << "\n";
-    for(auto& idTag : idTagTable.getMap()) {
+    std::unordered_map<std::string, int>& idMap = idTagTable.getMap();
+    std::vector<std::pair<std::string, int>> sortedIdMap(idMap.begin(), idMap.end());
+    std::sort(sortedIdMap.begin(), sortedIdMap.end(), [](auto &left, auto &right) {
+        return left.second < right.second;
+    });
+    for(auto& idTag : sortedIdMap) {
         s << idTag.first << " " << idTag.second << "\n";
     }
     s << eoFiles.size() << "\n";
     for(fs::path eoFile : eoFiles) {
         s << eoFile.string() << "\n";
     }
+    s << lib << "\n";
+    s << projectName << "\n";
     s.close();
 }
 
@@ -135,6 +155,18 @@ void Config::setStackSize(std::string stackSize) {
     this->stackSize = atoi(stackSize.c_str());
 }
 
+void Config::setLib(bool lib) {
+    if(lib) {
+        this->lib = 1;
+    } else {
+        this->lib = 0;
+    }
+}
+
+void Config::setProjectName(std::string projectName) {
+    this->projectName = projectName;
+}
+
 fs::path Config::getExeDir() {
     return exeDir;
 }
@@ -162,6 +194,13 @@ std::string Config::getArguments() {
     return arguments;
 }
 
+std::string Config::getProjectName() {
+    if(projectName == "") {
+        setProjectName("eolang");
+    }
+    return projectName;
+}
+
 IdTagTable& Config::getIdTagTable() {
     return idTagTable;
 }
@@ -171,6 +210,13 @@ int Config::getStackSize() {
         stackSize = 1 << 20;
     }
     return stackSize;
+}
+
+bool Config::isLib() {
+    if(lib == -1) {
+        return false;
+    }
+    return lib;
 }
 
 bool Config::isMainObjectPackageChanged() {
@@ -187,6 +233,14 @@ bool Config::isCMakeFlagsChanged() {
 
 bool Config::isStackSizeChanged() {
     return stackSizeChanged;
+}
+
+bool Config::isProjectNameChanged() {
+    return projectNameChanged;
+}
+
+bool Config::isLibChanged() {
+    return libChanged;
 }
 
 void Config::updateProjectStructure(std::vector<TranslationUnit>& units) {

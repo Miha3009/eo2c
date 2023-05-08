@@ -11,11 +11,11 @@ EntryPointGenerator::~EntryPointGenerator() {
 }
 
 bool EntryPointGenerator::run() {
-    codeModel.addImport(mainObjectPackage);
-    if(!writeMain()) {
+    codeModel.addStdImport("\"object.h\"");
+    if(!codeModel.addImport(mainObjectPackage) || !writeMain()) {
         return false;
     }
-    return codeModel.open() && codeModel.write();
+    return codeModel.open(false) && codeModel.write();
 }
 
 bool EntryPointGenerator::writeMain() {

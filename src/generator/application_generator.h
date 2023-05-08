@@ -30,7 +30,7 @@ private:
     void genRef(Object* obj, std::string parentVar, bool isTemp);
     void genData(Object* obj);
     void genClass(Object* obj);
-    bool findInClass(Object* obj);
+    bool findInClass(Object* obj, std::string parentVar, bool isTemp);
     bool findVarInAlias(Object* obj);
 };
 

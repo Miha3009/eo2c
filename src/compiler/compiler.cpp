@@ -7,6 +7,7 @@
 #include "parser.h"
 #include "object.h"
 #include "optimizer.h"
+#include "validator.h"
 #include "generator.h"
 #include "cmake_generator.h"
 #include "entry_point_generator.h"
@@ -40,6 +41,10 @@ bool Compiler::compile() {
 }
 
 bool Compiler::dataize() {
+    if(config.isLib()) {
+        std::cout << "The library cannot be dataized\n";
+        return false;
+    }
     return compile() && runExecutable();
 }
 
@@ -128,6 +133,10 @@ bool Compiler::parse(std::vector<TranslationUnit>& units) {
 bool Compiler::optimize(std::vector<TranslationUnit>& units) {
     int successCount = 0;
     for(TranslationUnit& unit : units) {
+        Validator validator(unit, importsMap);
+        if(!validator.validate()) {
+            continue;
+        }
         Optimizer optimizer(unit, config.getIdTagTable(), importsMap);
         if(optimizer.run()) {
             ++successCount;
@@ -189,11 +198,14 @@ bool Compiler::copyBaseFiles() {
 }
 
 bool Compiler::genMain(std::vector<TranslationUnit>& units) {
+    if(config.isLib()) {
+        return true;
+    }
     TranslationUnit mainUnit;
     mainUnit.buildCpp = config.getBuildPath() / fs::path("main.cpp");
-    mainUnit.buildHeader = config.getBuildPath() / fs::path("main.h");
+    mainUnit.buildHeader = config.getBuildPath() / fs::path("main.cpp");
     TranslationUnit* unit = importsMap.getUnit(config.getMainObjectPackage());
-    if(fs::exists(mainUnit.buildCpp) && fs::exists(mainUnit.buildHeader) && !config.isMainObjectPackageChanged() && unit && !unit->updated && !config.isStackSizeChanged()) {
+    if(fs::exists(mainUnit.buildCpp) && !config.isMainObjectPackageChanged() && unit && !unit->updated && !config.isStackSizeChanged()) {
         return true;
     }
     EntryPointGenerator generator(mainUnit, config.getIdTagTable(), importsMap, units, config.getMainObjectPackage(), config.getStackSize());
@@ -201,10 +213,10 @@ bool Compiler::genMain(std::vector<TranslationUnit>& units) {
 }
 
 bool Compiler::genCmake(std::vector<TranslationUnit>& units) {
-    if(!config.isProjectStructureChanged(units) && !config.isCMakeFlagsChanged() && fs::exists(config.getBuildPath() / fs::path("CMakeLists.txt"))) {
+    if(!config.isProjectStructureChanged(units) && !config.isCMakeFlagsChanged() && fs::exists(config.getBuildPath() / fs::path("CMakeLists.txt")) && !config.isLibChanged() && !config.isProjectNameChanged()) {
         return true;
     }
-    CmakeGenerator cmakeGenerator(units, config.getBuildPath());
+    CmakeGenerator cmakeGenerator(units, config.getBuildPath(), config.isLib(), config.getProjectName());
     if(!cmakeGenerator.open()) {
         return false;
     }
@@ -236,10 +248,10 @@ bool Compiler::runMake() {
 
 bool Compiler::runExecutable() {
 #ifdef __WIN32__
-    std::string cmd = "\"" + (config.getBuildPath() / fs::path("build") / fs::path("eolang.exe")).string() + "\" " + config.getArguments();
+    std::string cmd = "\"" + (config.getBuildPath() / fs::path("build") / fs::path(config.getProjectName() + ".exe")).string() + "\" " + config.getArguments();
     return std::system(cmd.c_str()) == 0;
 #elif defined(__linux__)
-    std::string cmd = "./" + (config.getBuildPath() / fs::path("build") / fs::path("eolang")).string() + " " + config.getArguments();
+    std::string cmd = "./" + (config.getBuildPath() / fs::path("build") / fs::path(config.getProjectName())).string() + " " + config.getArguments();
     return std::system(cmd.c_str()) == 0;
 #else
     return false;

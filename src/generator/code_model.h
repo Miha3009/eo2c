@@ -68,8 +68,8 @@ class CodeModel {
 public:
     CodeModel(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& importsMap);
     ~CodeModel();
-    bool open();
-    void addImport(std::string alias);
+    bool open(bool withHeader);
+    bool addImport(std::string alias);
     void addStdImport(std::string import);
     void addStruct(Struct s);
     void addFunction(Function f);
@@ -92,5 +92,15 @@ std::string genVarName(int num);
 std::string genCall(Call call);
 std::string genCall(std::string callName);
 std::string genCall(std::string callName, std::vector<std::string> argumets);
+
+class NullOfstream : public std::ofstream {
+public:
+  NullOfstream() : std::ofstream() {}
+};
+
+template <class T>
+const NullOfstream &operator<<(NullOfstream &&os, const T &value) { 
+  return os;
+}
 
 #endif // CODE_MODEL_H

@@ -8,9 +8,6 @@ Optimizer::Optimizer(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& 
 }
 
 bool Optimizer::run() {
-    if(!unit.root->validate()) {
-        return false;
-    }
     applyInverseNotation(unit.root);
     expandQQ(unit.root, unit);
     unit.root = removeReduntObjects(unit.root);

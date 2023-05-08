@@ -3,8 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <unordered_set>
-#include <unordered_map>
 #include "types.h"
 
 struct Meta {
@@ -30,10 +28,12 @@ public:
     Object(Object* parent, objectType type);
     ~Object();
     Object* makeChild(objectType type);
+    Object* makeChild(objectType type, std::string value);
     Object* makeParent(objectType type);
     void addChild(Object* child);
     void setChildren(std::vector<Object*> children);
     void clearChildren();
+    void deleteLastChild();
     void setValue(std::string value);
     void setOriginValue(std::string value);
     void setType(objectType type);
@@ -42,7 +42,6 @@ public:
     void addAttribute(std::string name);
     void setAttributes(std::vector<Attribute> attributes);
     void addToSequence(objectType type, std::string value);
-    bool validate();
     bool isRoot();
     bool isDecorator();
     bool hasFlags(int flags);
@@ -56,11 +55,10 @@ public:
     Object* getClassObject();
     Object* getApplicationHead();
     std::vector<Object*> getApplicationAttributes();
+    bool equals(Object* obj, bool withFlags);
     void printDebug();
 
 private:
-    bool validate(std::unordered_set<std::string>& context);
-    std::pair<bool, std::unordered_set<std::string>> checkDuplicateNames();
     void printDebug(int s);
 };
 

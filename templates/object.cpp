@@ -1,6 +1,7 @@
 #include "object.h"
 #include "org/eolang/int.h"
 #include "org/eolang/float.h"
+#include "org/eolang/bool.h"
 #include "org/eolang/string.h"
 #include "org/eolang/array.h"
 #include "org/eolang/bytes.h"
@@ -16,18 +17,32 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
   const std::unordered_map<Tag, int>* offset_table = obj->head.offset_map;
   auto result_it = offset_table->find(tag);
   if(result_it == offset_table->end()) {
-    obj = evaluate(obj);
-    offset_table = obj->head.offset_map;
-    result_it = offset_table->find(tag);
+    EO_object* newObj = evaluate(obj);
+    while(newObj != obj) {
+      obj = newObj;
+      offset_table = obj->head.offset_map;
+      result_it = offset_table->find(tag);
+      if(result_it != offset_table->end()) {
+        break;
+      }
+      newObj = evaluate(obj);
+    }
     if(result_it == offset_table->end()) {
       wprintf(L"Error: tag %d not found\n", tag);
+      print_object(obj);
       exit(0);
     }
   }
   EO_object* result = (EO_object*)((StackPos)obj + (*result_it).second);
   StackPos last_attribute = (StackPos)((int*)(obj + 1) + obj->head.attr_count);
   if(last_attribute - (StackPos)result > 0) {
-    result = apply_offset(obj, *((int*)result));
+    int offset = *((int*)result);
+    if(!offset) {
+      wprintf(L"Error: tag %d not initialized\n", tag);
+      print_object(obj);
+      exit(0);
+    }
+    result = apply_offset(obj, offset);
   }
   if(need_copy) {
     result = clone(result);
@@ -36,6 +51,11 @@ EO_object* get_sub(EO_object* obj, Tag tag, bool need_copy) {
 }
 
 EO_object* get_parent(EO_object* obj) {
+  if(!obj->head.parent_offset) {
+    wprintf(L"Error: parent not found\n");
+    print_object(obj);
+    exit(0);
+  }
   return (EO_object*)((StackPos)obj - obj->head.parent_offset);
 }
 
@@ -58,7 +78,7 @@ void init_head(EO_object* obj,
   obj->head.id = obj_count++;
   obj->head.eval = eval;
   obj->head.parent_offset = parent_offset;
-  obj->head.home = get_parent(obj);
+  obj->head.home = (EO_object*)((StackPos)obj - parent_offset);
   obj->head.attr_count = 0;
   obj->head.varargs_pos = varargs_pos;
   obj->head.size = size;
@@ -166,10 +186,29 @@ wchar_t* get_string_data(EO_object* obj) {
   return (wchar_t*)((StackPos)obj + sizeof(EO_string));
 }
 
+long long get_int_data(EO_object* obj) {
+  return ((EO_int*)obj)->value;
+}
+
+double get_float_data(EO_object* obj) {
+  return ((EO_float*)obj)->value;
+}
+
+bool get_bool_data(EO_object* obj) {
+  return ((EO_bool*)obj)->value;
+}
+
 EO_object* make_inner_application(EO_object* parent, EO_object* (*eval)(EO_object*)) {
   EO_object* inner_application = stack_alloc(sizeof(EO_object));
   init_head(inner_application, eval, calc_offset(parent, inner_application), -1, sizeof(EO_object), &offset_default);
   return inner_application;
+}
+
+EO_object* run_inner_application(EO_object* obj, EO_object* (*eval)(EO_object*)) {
+  static char buf[sizeof(EO_object)];
+  EO_object* tmp = (EO_object*)buf;
+  tmp->head.home = obj;
+  return eval(tmp);
 }
 
 EO_object* make_array(int length) {
@@ -241,4 +280,8 @@ EO_object* make_object_from_arg(char* arg) {
     return obj;
   }
   return nullptr;
+}
+
+void print_object(EO_object* obj) {
+  wprintf(L"Object id = %d\n", obj->head.id);
 }

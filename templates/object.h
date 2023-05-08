@@ -120,7 +120,15 @@ string_value make_string(const wchar_t* str);
 
 wchar_t* get_string_data(EO_object* obj);
 
+long long get_int_data(EO_object* obj);
+
+double get_float_data(EO_object* obj);
+
+bool get_bool_data(EO_object* obj);
+
 EO_object* make_inner_application(EO_object* parent, EO_object* (*eval)(EO_object*));
+
+EO_object* run_inner_application(EO_object* obj, EO_object* (*eval)(EO_object*));
 
 EO_object* make_array(int length);
 
@@ -129,5 +137,7 @@ EO_object* array_at(EO_object* arr, int i);
 int get_array_length(EO_object* obj);
 
 EO_object* make_object_from_arg(char* arg);
+
+void print_object(EO_object* obj);
 
 #endif  // OBJECT_H

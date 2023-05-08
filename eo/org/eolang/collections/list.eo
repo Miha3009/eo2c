@@ -39,7 +39,7 @@
   [x] > with
     list > @
       with.
-        arr
+        ^.arr
         x
 
   [f] > mappedi /mappedi
@@ -48,6 +48,35 @@
     ^.mappedi > @
       [x idx]
         &.f x > @
+
+  [a f] > reducedi
+    if. > @
+      0.eq ^.arr.length
+      a
+      rec-reduced
+        * a 0
+        f
+        ^.arr
+
+    [acc-index func carr] > rec-reduced
+      acc-index.at 0 > acc
+      acc-index.at 1 > index
+      func > new-acc
+        acc
+        index
+        carr.at index
+      if. > @
+        (index.plus 1).eq (carr.length)
+        new-acc
+        rec-reduced
+          *
+            func
+              acc
+              index
+              carr.at index
+            index.plus 1
+          func
+          carr
 
   # Reduce with index from start "a" using the function "f".
   # Here "f" must be an abstract
@@ -93,9 +122,9 @@
   #  ^.reducedi > @
   #    a
   #    [a idx item]
-  #      &.f > @
-  #        a
-  #        item
+  #     &.f > @
+  #       a
+  #       item
   #
   # Map with index. Here "f" must be an abstract
   # object with two free attributes. The first

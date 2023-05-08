@@ -37,7 +37,9 @@ int main(int argc, char** argv)
         .addArgWithFlagAndName('m', "main", true, false, "Package of main object.", "Determines which object will be dataized.")
         .addArgWithFlagAndName('q', "quiet", false, false, "Disable progress messages.", "Don't print anything except errors and output of the EO program.")
         .addArgWithFlagAndName('f', "flags", true, false, "Flags for CMake.", "Specify the flags with which CMake will be run during compilation.")
-        .addArgWithFlagAndName('a', "arguments", true, false, "Arguments for executable.", "Specifty the arguments that will be passed to the executable program during dataization")
+        .addArgWithFlagAndName('a', "arguments", true, false, "Arguments for executable.", "Specifty the arguments that will be passed to the executable program during dataization.")
+        .addArgWithFlagAndName('p', "project", true, false, "Project name.", "")
+        .addArgWithFlagAndName('l', "lib", false, false, "Generate a library.", "Do not generate main and executagle file.")
         .addArgWithNameOnly("stack", true, false, "Size of stack.", "Size of stack for objects in bytes.")
         .addHelp(true, argv[0], SL("Compiler from EO to C++ (indev)."));
         cmd.parse();
@@ -68,6 +70,12 @@ int main(int argc, char** argv)
     }
     if(cmd.isDefined("-a")) {
         config.setArguments(cmd.value("-a"));
+    }
+    if(cmd.isDefined("-p")) {
+        config.setProjectName(cmd.value("-p"));
+    }
+    if(cmd.isDefined("-l")) {
+        config.setLib(true);
     }
     if(cmd.isDefined("--stack")) {
         config.setStackSize(cmd.value("--stack"));

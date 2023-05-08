@@ -1,0 +1,23 @@
++package profile
+
+[] > test1
+  if. > @
+    is-prime 999983
+    QQ.io.stdout "PRIME\n"
+    QQ.io.stdout "NOT PRIME\n"
+
+  [n] > is-prime
+    rec-is-prime n 2 > @
+
+    [n m] > rec-is-prime
+      if. > @
+        lt.
+          n
+          m.times m
+        TRUE
+        if.
+          eq.
+            n
+            (n.div m).times m
+          FALSE
+          rec-is-prime n (m.plus 1)

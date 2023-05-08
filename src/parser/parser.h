@@ -24,6 +24,7 @@ class Parser {
     objectType dataType;
     Object* curObj;
     TranslationUnit& unit;
+    bool test;
 
 public:
     Parser(TranslationUnit& unit, const char* str);
@@ -65,6 +66,7 @@ public:
     bool errorMessage(std::string&& messageText);
     void debugMessage(std::string&& messageText);
     void printMessage(std::string&& messageText, std::string&& messageType);
+    void setTest(bool test);
 
     inline bool isSymbol(char ch) {
         return str[pos] == ch;

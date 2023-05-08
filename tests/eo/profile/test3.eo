@@ -1,0 +1,12 @@
++package profile
+
+[] > test3
+  QQ.io.stdout (QQ.txt.sprintf "%d" (build-array 4).length) > @
+
+  [n] > build-array
+    if. > @
+      gt.
+        n
+        0
+      (build-array (n.minus 1)).with n
+      *

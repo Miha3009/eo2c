@@ -7,12 +7,14 @@ target_sources(model
     object.cpp
     id_tag_table.cpp
     imports_map.cpp
+    validator.cpp
   PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/object.h
     ${CMAKE_CURRENT_LIST_DIR}/types.h
     ${CMAKE_CURRENT_LIST_DIR}/translation_unit.h
     ${CMAKE_CURRENT_LIST_DIR}/id_tag_table.h
     ${CMAKE_CURRENT_LIST_DIR}/imports_map.h
+    ${CMAKE_CURRENT_LIST_DIR}/validator.h
 )
 
 target_include_directories(model

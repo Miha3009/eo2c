@@ -93,12 +93,16 @@ void ApplicationGenerator::genInnerApplication(Object* obj) {
     Function f2 = appGen.getFunction();
     f2.setType(INNER, appGen.getResultVar());
     codeModel.addFunction(f2);
-    f.addLine(f.nextVarDeclaration() + genCall("make_inner_application", {"obj", f2.getName()}));
+    if(obj->hasFlags(CONSTANT_FLAG)) {
+        f.addLine(f.nextVarDeclaration() + genCall("run_inner_application", {"obj", f2.getName()}));
+    } else {
+        f.addLine(f.nextVarDeclaration() + genCall("make_inner_application", {"obj", f2.getName()}));        
+    }
 }
 
 void ApplicationGenerator::genVar(Object* obj, std::string parentVar, bool isTemp) {
     if(parentVar == "obj") {
-        if(findInClass(obj) || findVarInAlias(obj)) return;
+        if(findInClass(obj, parentVar, isTemp) || findVarInAlias(obj)) return;
     }
     std::string copyBool = isTemp ? "false" : "true";
     f.addLine(f.nextVarDeclaration() + genCall("get_sub", {parentVar, codeModel.getIdTagTable().getTag(obj->getValue()), copyBool}));
@@ -128,6 +132,7 @@ void ApplicationGenerator::genData(Object* obj) {
     std::string type;
     std::string value = obj->getValue();
     Call c("make_bytes");
+    int array_length;
     switch(obj->getType()) {
     case INT_TYPE:
         type = "EO_int";
@@ -158,7 +163,11 @@ void ApplicationGenerator::genData(Object* obj) {
         codeModel.addImport("org.eolang.bytes");
         break;
     case ARRAY_TYPE:
-        f.addLine(f.nextVarDeclaration() + genCall("make_array", {std::to_string(obj->getParent()->getApplicationAttributes().size())}));
+        array_length = obj->getParent()->getApplicationAttributes().size();
+        if(array_length > 0 && obj != obj->getParent()->getApplicationHead()) {
+            array_length = 0;
+        }
+        f.addLine(f.nextVarDeclaration() + genCall("make_array", {std::to_string(array_length)}));
         codeModel.addImport("org.eolang.array");
         return;
     default:
@@ -178,10 +187,22 @@ void ApplicationGenerator::genClass(Object* obj) {
     f.addLine(genCall("init_" + type, {"(" + type + "*)" + f.getVar(), "(StackPos)" + f.getVar() + "-(StackPos)obj"}));
 }
 
-bool ApplicationGenerator::findInClass(Object* obj) {
+bool ApplicationGenerator::findInClass(Object* obj, std::string parentVar, bool isTemp) {
+    int depth = 0;
     Object* classObj = obj;
     while(classObj != nullptr) {
         classObj = classObj->getClassObject();
+        for(Attribute attr : classObj->getAttributes()) {
+            if(attr.name == obj->getValue()) {
+                for(int i = 0; i < depth; ++i) {
+                    f.addLine(f.nextVarDeclaration() + genCall("get_parent", {parentVar}));
+                    parentVar = f.getVar();
+                }
+                std::string copyBool = isTemp ? "false" : "true";
+                f.addLine(f.nextVarDeclaration() + genCall("get_sub", {parentVar, codeModel.getIdTagTable().getTag(obj->getValue()), copyBool}));
+                return true;
+            }
+        }
         for(Object* child : classObj->getChildren()) {
             if(obj->getOriginValue() == child->getOriginValue()) {
                 std::string classType = child->getClassName();
@@ -191,6 +212,7 @@ bool ApplicationGenerator::findInClass(Object* obj) {
             }
         }
         classObj = classObj->getParent();
+        ++depth;
     }
     return false;
 }

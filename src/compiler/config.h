@@ -25,6 +25,10 @@ class Config {
     std::vector<fs::path> eoFiles;
     int stackSize;
     bool stackSizeChanged;
+    int lib;
+    bool libChanged;
+    std::string projectName;
+    bool projectNameChanged;
 
 public:
     Config(fs::path exeDir);
@@ -39,18 +43,24 @@ public:
     void setCMakeFlags(std::string cmakeFlags);
     void setArguments(std::string arguments);
     void setStackSize(std::string stack);
+    void setProjectName(std::string projectName);
+    void setLib(bool lib);
     fs::path getExeDir();
     fs::path getSources();
     fs::path getBuildPath();
     std::string getMainObjectPackage();
     std::string getCMakeFlags();
     std::string getArguments();
+    std::string getProjectName();
     IdTagTable& getIdTagTable();
     int getStackSize();
-    bool isMainObjectPackageChanged();
     bool isQuiet();
+    bool isLib();
+    bool isMainObjectPackageChanged();
     bool isCMakeFlagsChanged();
     bool isStackSizeChanged();
+    bool isProjectNameChanged();
+    bool isLibChanged();
 
 private:
     void updateProjectStructure(std::vector<TranslationUnit>& units);

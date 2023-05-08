@@ -19,6 +19,7 @@ public:
     std::string getImport(TranslationUnit& from, std::string alias);
     std::string getObjectImport(TranslationUnit& from);
     Object* getObject(std::string alias, std::string objectName);
+    void setValueForTest(std::string alias, TranslationUnit* unit);
 };
 
 #endif // IMPORTS_MAP_H

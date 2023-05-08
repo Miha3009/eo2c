@@ -1,7 +1,10 @@
 #include <iostream>
 #include "parser.h"
 
-Parser::Parser(TranslationUnit& unit, const char* str): unit{unit}, str{str}, pos{0}, line{1}, column{1} {
+//#define DEBUG
+
+Parser::Parser(TranslationUnit& unit, const char* str): unit{unit}, str{str}, pos{0}, line{1}, column{1}, test{false} {
+    curObj = unit.root;
     int p = 0;
     spaces = {0, 0};
     while(str[p] != '\0') {
@@ -34,7 +37,7 @@ _end:
     return !hasError;
 }
 
-// license ::= {comment EOL}
+// license ::= {comment} EOL
 bool Parser::isLicense() {
     if(isComment()) {
         goto _1;
@@ -76,7 +79,7 @@ _end:
     return true;
 }
 
-// meta ::= '#' name [' ' ANY {ANY}] EOL
+// meta ::= '+' name [' ' ANY {ANY}] EOL
 bool Parser::isMeta() {
     std::string type;
     if(isSymbol('+')) {
@@ -252,25 +255,24 @@ bool Parser::isMethod() {
         next(1);
         goto _1;
     }
+    if(isSymbol('!')) {
+        curObj->addFlags(CONSTANT_FLAG);
+        next(1);
+        goto _end;
+    }
     return false;
 _1:
     if(isName()) {
         curObj->addToSequence(VAR_TYPE, lexValue);
-        goto _2;
+        goto _end;
     }
     if(isSymbol('&') || isSymbol('<') || isSymbol('^') || isSymbol('@')) {
         curObj->addToSequence(REF_TYPE, std::to_string(str[pos]));
         next(1);
-        goto _2;
+        goto _end;
     }
     restoreLocation(l);
     return false;
-_2:
-    if(isSymbol('!')) {
-        next(1);
-        goto _end;
-    }
-    goto _end;
 _end:
 #ifdef DEBUG
     debugMessage("This is method");
@@ -393,8 +395,8 @@ _end:
 bool Parser::isSuffix() {
     std::string tmpValue;
     if(str[pos]   == ' ' &&
-            str[pos+1] == '>' &&
-            str[pos+2] == ' ') {
+       str[pos+1] == '>' &&
+       str[pos+2] == ' ') {
         next(3);
         goto _1;
     }
@@ -405,7 +407,7 @@ _1:
             curObj->setOriginValue(lexValue);
         } else {
             Object* tmpObj = curObj;
-            while(tmpObj->getParent()->getType() != CLASS_TYPE) {
+            while(tmpObj->getParent() != nullptr && tmpObj->getParent()->getType() != CLASS_TYPE) {
                 tmpObj = tmpObj->getParent();
             }
             tmpObj->setOriginValue(lexValue);
@@ -415,7 +417,7 @@ _1:
     return errorMessage("'@' or name expected");
 _2:
     if(isSymbol('!')) {
-        lexValue += "!";
+        curObj->addFlags(CONSTANT_FLAG);
         next(1);
     }
 #ifdef DEBUG
@@ -463,7 +465,9 @@ bool Parser::isApplication(bool parseHtail) {
     if(isScope()) {
         goto _2;
     }
-    delete curObj;
+    if(parseHtail) {
+        curObj->deleteLastChild();
+    }
     curObj = tmpObj;
     return false;
 _1:
@@ -569,7 +573,7 @@ _end:
     return true;
 }
 
-// head ::= ['...'] (name [''' | '.'] | data | '@' | '$' | '&' | '^' | '*')
+// head ::= ['...'] (name [''' | '.'] | data | '@' | '$' | '&' | '^' | 'QQ')
 bool Parser::isHead() {
     std::string tmpValue = "";
     if(str[pos]   == '.' &&
@@ -652,8 +656,9 @@ _1:
             !isSymbol(']') &&
             !isSymbol(')') &&
             !isSymbol(':') &&
+            !isSymbol('!') &&
             !isSymbol('.')) {
-        lexValue+= str[pos];
+        lexValue += str[pos];
         next(1);
     }
 #ifdef DEBUG
@@ -1162,12 +1167,18 @@ _1:
 
 bool Parser::errorMessage(std::string&& messageText) {
     hasError = true;
-    printMessage(std::move(messageText), "error");
+    if(!test) {
+        printMessage(std::move(messageText), "error");
+    }
     return false;
 }
 
 void Parser::debugMessage(std::string&& messageText) {
     printMessage(std::move(messageText), "debug");
+}
+
+void Parser::setTest(bool test) {
+    this->test = test;
 }
 
 void Parser::printMessage(std::string&& messageText, std::string&& messageType) {

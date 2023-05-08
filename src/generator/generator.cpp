@@ -9,7 +9,7 @@ Generator::Generator(TranslationUnit& unit, IdTagTable& idTagTable, ImportsMap& 
 }
 
 bool Generator::run() {
-    if(!codeModel.open()) {
+    if(!codeModel.open(true)) {
         return false;
     }
     genModel(unit.root);

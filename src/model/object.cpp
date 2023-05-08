@@ -23,7 +23,12 @@ Object::~Object() {
 }
 
 Object* Object::makeChild(objectType type) {
+    return makeChild(type, "");
+}
+
+Object* Object::makeChild(objectType type, std::string value) {
     Object* child = new Object(this, type);
+    child->setOriginValue(value);
     children.push_back(child);
     return child;
 }
@@ -57,6 +62,13 @@ void Object::setChildren(std::vector<Object*> children) {
 
 void Object::clearChildren() {
     children.clear();
+}
+
+void Object::deleteLastChild() {
+    if(children.size() > 0) {
+        delete children[children.size()-1];
+        children.pop_back();
+    }
 }
 
 void Object::setValue(std::string value) {
@@ -125,11 +137,6 @@ void Object::addToSequence(objectType type, std::string value) {
     }
     Object* child = makeChild(type);
     child->setOriginValue(value);
-}
-
-bool Object::validate() {
-    std::unordered_set<std::string> context;
-    return validate(context);
 }
 
 bool Object::isRoot() {
@@ -207,48 +214,28 @@ std::vector<Object*> Object::getApplicationAttributes() {
     return result;
 }
 
-bool Object::validate(std::unordered_set<std::string>& context) {
-    if(type == CLASS_TYPE) {
-        auto check = checkDuplicateNames();
-        if(!check.first) {
+bool Object::equals(Object* obj, bool withFlags) {
+    if(this->type != obj->type
+    || this->originValue != obj->originValue
+    || (withFlags && this->flags != obj->flags)
+    || this->attributes.size() != obj->attributes.size()
+    || this->children.size() != obj->children.size()) {
+        return false;
+    }
+
+    for(int i = 0; i < attributes.size(); ++i) {
+        if(this->attributes[i].name != obj->attributes[i].name
+        || this->attributes[i].isVararg != obj->attributes[i].isVararg) {
             return false;
         }
-        for(int i = 0; i + 1 < attributes.size(); ++i) {
-            if(attributes[i].isVararg) {
-                std::cout << "error: varargs attribute must be the last";
-                return false;
-            }
-        }
-        for(Object* child : children) {
-            if(!child->validate(check.second)) return false;
-        }
-    } else {
-        for(Object* child : children) {
-            if(!child->validate(context)) return false;
+    }
+    for(int i = 0; i < children.size(); ++i) {
+        if(!this->children[i]->equals(obj->children[i], withFlags)) {
+            return false;
         }
     }
-    return true;
-}
 
-std::pair<bool, std::unordered_set<std::string>> Object::checkDuplicateNames() {
-    std::unordered_set<std::string> names;
-    for(Attribute& a : attributes) {
-        if(names.count(a.name)) {
-            std::cout << "error: attribute with name " << a.name << " already defined\n";
-            return make_pair(false, names);
-        }
-        names.insert(a.name);
-    }
-    for(Object* child : children) {
-        if(child->value != "" && (child->type == CLASS_TYPE || child->type == APPLICATION_TYPE)) {
-            if(names.count(child->value)) {
-                std::cout << "error: object with name " << child->value << " already defined\n";
-                return make_pair(false, names);
-            }
-            names.insert(child->value);
-        }
-    }
-    return make_pair(true, names);
+    return true;
 }
 
 void Object::printDebug() {
@@ -259,6 +246,7 @@ void Object::printDebug(int s) {
     std::cout << std::string(s, ' ');
     if(type) std::cout << "type=" << objectTypeNames[type] << " ";
     if(!value.empty()) std::cout << "value=" << value << " ";
+    if(flags != 0) std::cout << "flags=" << flags << " ";
     for(int i = 0; i < attributes.size(); ++i) {
         if(i == 0) std::cout << "[" << attributes[i].name;
         else std::cout << " " << attributes[i].name;

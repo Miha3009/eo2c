@@ -66,12 +66,17 @@ CodeModel::~CodeModel() {
     outSource.close();
 }
 
-bool CodeModel::open() {
-    fs::create_directories(unit.buildHeader.parent_path());
-    outHeader.open(unit.buildHeader.string());
-    if(!outHeader.is_open()) {
-        std::cout << "error: File " << unit.buildHeader.string() << " isn't accesible" << std::endl;
-        return false;
+bool CodeModel::open(bool withHeader) {
+    if(withHeader) {
+        fs::create_directories(unit.buildHeader.parent_path());
+        outHeader.open(unit.buildHeader.string());
+        if(!outHeader.is_open()) {
+            std::cout << "error: File " << unit.buildHeader.string() << " isn't accesible" << std::endl;
+            return false;
+        }
+        sourceImports.insert("\"" + unit.buildHeader.filename().string() + "\"");
+    } else {
+        outHeader = NullOfstream();
     }
     fs::create_directories(unit.buildCpp.parent_path());
     outSource.open(unit.buildCpp.string());
@@ -79,18 +84,19 @@ bool CodeModel::open() {
         std::cout << "error: File " << unit.buildCpp.string() << " isn't accesible" << std::endl;
         return false;
     }
-    sourceImports.insert("\"" + unit.buildHeader.filename().string() + "\"");
     filename = unit.buildHeader.stem().filename().string();
     return true;
 }
 
-void CodeModel::addImport(std::string alias) {
+bool CodeModel::addImport(std::string alias) {
     std::string import = importsMap.getImport(unit, alias);
     if(import != "") {
         sourceImports.insert("\"" + import + "\"");
     } else {
         std::cout << "File for alias " << alias << " not found\n";
+        return false;
     }
+    return true;
 }
 
 void CodeModel::addStdImport(std::string import) {

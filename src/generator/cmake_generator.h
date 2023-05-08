@@ -12,9 +12,11 @@ class CmakeGenerator {
     std::vector<TranslationUnit>& units;
     fs::path buildPath;
     std::ofstream out;
+    bool lib;
+    std::string project;
 
 public:
-    CmakeGenerator(std::vector<TranslationUnit>& units, fs::path buildPath);
+    CmakeGenerator(std::vector<TranslationUnit>& units, fs::path buildPath, bool lib, std::string project);
     ~CmakeGenerator();
     bool open();
     void run();
