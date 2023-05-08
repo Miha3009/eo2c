@@ -22,10 +22,10 @@ EO_object* eval_EO_sprintf(EO_object* obj) {
             buf2[s+1] = '\0';
             if(format[i] == 'd') {
                 long long value = ((EO_int*)evaluate(array_at(args, k++)))->value;
-                j += swprintf(buf + j, L"%lld", value);
+                j += swprintf(buf + j, 1 << 12 - j, L"%lld", value);
             } else if(format[i] == 'f') {
                 double value = ((EO_float*)evaluate(array_at(args, k++)))->value;
-                j += swprintf(buf + j, buf2, value);
+                j += swprintf(buf + j, 1 << 12 - j, buf2, value);
             } else if (format[i] == 's') {
                 EO_object* str = evaluate(array_at(args, k++));
                 wchar_t* value = get_string_data(str);
