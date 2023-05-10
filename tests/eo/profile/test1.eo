@@ -2,7 +2,7 @@
 
 [] > test1
   if. > @
-    is-prime 999983
+    is-prime 311
     QQ.io.stdout "PRIME\n"
     QQ.io.stdout "NOT PRIME\n"
 

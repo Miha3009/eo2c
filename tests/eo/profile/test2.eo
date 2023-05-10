@@ -1,7 +1,7 @@
 +package profile
 
 [] > test2
-  QQ.io.stdout (QQ.txt.sprintf "%d" (paths-count 11 11)) > @
+  QQ.io.stdout (QQ.txt.sprintf "%d" (paths-count 8 8)) > @
 
   [n m] > paths-count
     if. > @
@@ -14,5 +14,5 @@
           1
       1
       plus.
-        paths-count (n.minus 1)! m
-        paths-count n (m.minus 1)!
+        paths-count (n.minus 1) m
+        paths-count n (m.minus 1)
