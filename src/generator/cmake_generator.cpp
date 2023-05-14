@@ -30,6 +30,7 @@ void CmakeGenerator::run() {
 
 void CmakeGenerator::writeHead() {
     out << "cmake_minimum_required(VERSION 3.5 FATAL_ERROR)\n\n";
+    out << "set(CMAKE_CXX_STANDARD 11)\n\n";
     out << "project(" << project << ")\n\n";
 }
 
