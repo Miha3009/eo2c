@@ -198,9 +198,6 @@ bool Compiler::copyBaseFiles() {
 }
 
 bool Compiler::genMain(std::vector<TranslationUnit>& units) {
-    if(config.isLib()) {
-        return true;
-    }
     TranslationUnit mainUnit;
     mainUnit.buildCpp = config.getBuildPath() / fs::path("main.cpp");
     mainUnit.buildHeader = config.getBuildPath() / fs::path("main.cpp");
@@ -208,7 +205,7 @@ bool Compiler::genMain(std::vector<TranslationUnit>& units) {
     if(fs::exists(mainUnit.buildCpp) && !config.isMainObjectPackageChanged() && unit && !unit->updated && !config.isStackSizeChanged()) {
         return true;
     }
-    EntryPointGenerator generator(mainUnit, config.getIdTagTable(), importsMap, units, config.getMainObjectPackage(), config.getStackSize());
+    EntryPointGenerator generator(mainUnit, config.getIdTagTable(), importsMap, units, config.getMainObjectPackage(), config.getStackSize(), config.isLib());
     return generator.run();
 }
 

@@ -60,6 +60,10 @@ inline void stack_init(size_t size) {
   stack.end = stack.data + size;
 }
 
+inline void stack_delete() {
+  delete[] stack.data;
+}
+
 EO_object* stack_alloc(size_t size);
 
 inline StackPos stack_store() {

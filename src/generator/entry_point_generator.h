@@ -16,16 +16,18 @@ class EntryPointGenerator {
     std::vector<TranslationUnit>& units;
     std::string mainObjectPackage;
     int stackSize;
+    bool lib;
     std::ofstream out;
 
 public:
-    EntryPointGenerator(TranslationUnit& mainUnit, IdTagTable& idTagTable, ImportsMap& importsMap, std::vector<TranslationUnit>& units, std::string mainObjectPackage, int stackSize);
+    EntryPointGenerator(TranslationUnit& mainUnit, IdTagTable& idTagTable, ImportsMap& importsMap, std::vector<TranslationUnit>& units, std::string mainObjectPackage, int stackSize, bool lib);
     ~EntryPointGenerator();
     bool run();
 
 private:
     bool writeMain();
     void writeArguments(Function& f, Object* mainObject);
+    void writeArgumentsLib(Function& f, Object* mainObject);
 };
 
 #endif //ENTRY_POINT_GENERATOR_H

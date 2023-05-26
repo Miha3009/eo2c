@@ -83,8 +83,6 @@ TEST_CASE("Context test") {
     Object* test7_decorator = test7_child->makeChild(APPLICATION_TYPE, "@");
     Object* test7_var = test7_decorator->makeChild(VAR_TYPE, "x");
     REQUIRE(v.checkContext(test7_var));
-
-    delete unit.root;
 }
 
 /*
@@ -118,6 +116,4 @@ TEST_CASE("Dublicates test") {
     test3->addAttribute("x");
     test3->addAttribute("x");
     REQUIRE(!v.checkDuplicateNames(test3));
-
-    delete unit.root;
 }

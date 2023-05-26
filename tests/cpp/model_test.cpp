@@ -20,9 +20,6 @@ TEST_CASE("Reverse dot notation test") {
     Optimizer opt(unit2, table, map);
     REQUIRE(opt.run());
     REQUIRE(unit1.root->equals(unit2.root, false));
-
-    delete unit1.root;
-    delete unit2.root;
 }
 
 TEST_CASE("Data test") {
@@ -50,9 +47,6 @@ TEST_CASE("Data test") {
     Object* test_g_val1 = test_g_val->makeChild(BYTE_TYPE, "12");
     Object* test_g_val2 = test_g_val->makeChild(BYTE_TYPE, "bc");
     REQUIRE(unit.root->equals(root, true));
-
-    delete unit.root;
-    delete root;
 }
 
 TEST_CASE("Flags test") {
@@ -75,7 +69,4 @@ TEST_CASE("Flags test") {
     Object* test_d_val = test_d->makeChild(VAR_TYPE, "x");
     test_d_val->addFlags(CLONE_FLAG);
     REQUIRE(unit.root->equals(root, true));
-    
-    delete unit.root;
-    delete root;
 }
